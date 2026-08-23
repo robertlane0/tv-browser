@@ -1,4 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">TV Browser</string>
+    <string name="home_title">TV Browser</string>
+    <string name="row_services">Your Services</string>
+    <string name="row_manage">Manage</string>
+    <string name="card_add_service">Add Service</string>
+    <string name="card_settings">Settings</string>
+    <string name="ghost_add_first_service">Add your first service</string>
+
+    <string name="gate_blocked_title">Browser engine unavailable</string>
+    <string name="gate_blocked_description">Enable Android System WebView in Settings → Apps, then retry.</string>
+    <string name="gate_action_open_settings">Open App Settings</string>
+    <string name="gate_action_retry">Retry</string>
+    <string name="gate_warning_text">Android System WebView v%1$d is outdated. DRM video may fail — update it from the Play Store.</string>
+
+    <string name="context_edit">Edit</string>
+    <string name="context_change_ua">Change User Agent</string>
+    <string name="context_delete">Delete</string>
+    <string name="toast_deleted">%1$s deleted</string>
+    <string name="toast_not_available_yet">Not available yet</string>
 </resources>
