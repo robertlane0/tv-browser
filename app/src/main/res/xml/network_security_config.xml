@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext is forbidden globally. Per-domain exceptions are added ONLY after a
+  manual security review, and each entry MUST be logged with a review date in
+  specs/11-security-privacy-and-drm.md §6.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>
