@@ -2,6 +2,7 @@ package com.example.tvbrowser.ui.browser
 
 import android.content.pm.ApplicationInfo
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,12 +12,17 @@ import android.webkit.WebView
 import androidx.fragment.app.Fragment
 import com.example.tvbrowser.R
 import com.example.tvbrowser.data.Bookmark
+import com.example.tvbrowser.input.CssInjector
+import com.example.tvbrowser.input.MediaKeyInjector
+import com.example.tvbrowser.input.RemoteInputHandler
+import com.example.tvbrowser.web.TvWebViewClient
 import com.example.tvbrowser.web.UserAgentProvider
 import com.example.tvbrowser.web.WebViewConfigurator
 
 class WebViewFragment : Fragment() {
 
     private var webView: WebView? = null
+    private var inputHandler: RemoteInputHandler? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -44,8 +50,31 @@ class WebViewFragment : Fragment() {
             WebSettings.getDefaultUserAgent(requireContext())
         }).configure(webView, bookmark)
 
+        webView.webViewClient = TvWebViewClient(
+            CssInjector { name ->
+                requireContext().assets.open(name).bufferedReader().use { it.readText() }
+            }
+        )
+
+        val overlay = object : BrowserOverlayController {
+            override val isVisible: Boolean = false
+            override fun show() {}
+            override fun hide() {}
+            override fun toggle() {}
+        }
+
+        inputHandler = RemoteInputHandler(
+            webView,
+            overlay,
+            MediaKeyInjector(webView),
+            onExit = { activity?.finish() }
+        )
+
         webView.loadUrl(bookmark.url)
     }
+
+    fun dispatchKeyDown(keyCode: Int, event: KeyEvent): Boolean =
+        inputHandler?.onKeyDown(keyCode, event) ?: false
 
     override fun onResume() {
         super.onResume()

@@ -1,0 +1,50 @@
+package com.example.tvbrowser.input
+
+import android.view.KeyEvent
+import android.webkit.WebView
+import com.example.tvbrowser.ui.browser.BrowserOverlayController
+
+class RemoteInputHandler(
+    private val webView: WebView,
+    private val overlay: BrowserOverlayController,
+    private val mediaKeys: MediaKeyInjector,
+    private val onExit: () -> Unit
+) {
+
+    fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean = when (keyCode) {
+        KeyEvent.KEYCODE_BACK -> when {
+            overlay.isVisible -> {
+                overlay.hide()
+                webView.requestFocus()
+                true
+            }
+            webView.canGoBack() -> {
+                webView.goBack()
+                true
+            }
+            else -> {
+                onExit()
+                true
+            }
+        }
+        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> consumeUnrepeated(event) { mediaKeys.togglePlayPause() }
+        KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> consumeUnrepeated(event) { mediaKeys.seekBy(SEEK_STEP_MS) }
+        KeyEvent.KEYCODE_MEDIA_REWIND -> consumeUnrepeated(event) { mediaKeys.seekBy(-SEEK_STEP_MS) }
+        KeyEvent.KEYCODE_MENU -> {
+            overlay.toggle()
+            if (!overlay.isVisible) webView.requestFocus()
+            true
+        }
+        else -> false
+    }
+
+    private inline fun consumeUnrepeated(event: KeyEvent, action: () -> Unit): Boolean {
+        if (event.repeatCount > 0) return true
+        action()
+        return true
+    }
+
+    companion object {
+        const val SEEK_STEP_MS = 10_000L
+    }
+}

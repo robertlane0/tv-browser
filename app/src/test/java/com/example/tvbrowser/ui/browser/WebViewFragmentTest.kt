@@ -1,6 +1,7 @@
 package com.example.tvbrowser.ui.browser
 
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.View
 import android.webkit.WebView
 import android.widget.FrameLayout
@@ -9,8 +10,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.tvbrowser.R
 import com.example.tvbrowser.data.Bookmark
 import com.example.tvbrowser.data.UaMode
+import com.example.tvbrowser.web.TvWebViewClient
 import com.example.tvbrowser.web.UserAgentProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -96,6 +99,42 @@ class WebViewFragmentTest {
             .commitNow()
 
         assertTrue(controller.get().isFinishing)
+    }
+
+    @Test
+    fun installsTvWebViewClientForFocusInjection() {
+        val (_, webView) = launch()
+
+        assertTrue(shadowOf(webView).webViewClient is TvWebViewClient)
+    }
+
+    @Test
+    fun mediaPlayPauseDispatchInjectsVideoToggleJs() {
+        val (controller, webView) = launch()
+
+        val handled = controller.get().supportFragmentManager.fragments
+            .filterIsInstance<WebViewFragment>().first()
+            .dispatchKeyDown(
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+            )
+
+        assertTrue(handled)
+        assertTrue(shadowOf(webView).lastEvaluatedJavascript!!.contains("v.paused?v.play():v.pause()"))
+    }
+
+    @Test
+    fun dpadKeysFallThroughFragmentDispatch() {
+        val (controller, _) = launch()
+
+        assertFalse(
+            controller.get().supportFragmentManager.fragments
+                .filterIsInstance<WebViewFragment>().first()
+                .dispatchKeyDown(
+                    KeyEvent.KEYCODE_DPAD_LEFT,
+                    KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT)
+                )
+        )
     }
 }
 

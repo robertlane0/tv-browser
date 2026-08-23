@@ -3,6 +3,7 @@ package com.example.tvbrowser.ui.browser
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.fragment.app.FragmentActivity
 import com.example.tvbrowser.R
 import com.example.tvbrowser.data.Bookmark
@@ -24,6 +25,13 @@ class BrowserActivity : FragmentActivity() {
                 .replace(R.id.browser_container, WebViewFragment.newInstance(bookmark))
                 .commit()
         }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        val keyEvent = event ?: return super.onKeyDown(keyCode, event)
+        val handled = (supportFragmentManager.findFragmentById(R.id.browser_container) as? WebViewFragment)
+            ?.dispatchKeyDown(keyCode, keyEvent) ?: false
+        return if (handled) true else super.onKeyDown(keyCode, keyEvent)
     }
 
     companion object {
