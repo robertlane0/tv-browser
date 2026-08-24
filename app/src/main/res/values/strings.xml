@@ -19,4 +19,7 @@
     <string name="context_delete">Delete</string>
     <string name="toast_deleted">%1$s deleted</string>
     <string name="toast_not_available_yet">Not available yet</string>
+
+    <string name="drm_error_title">Protected video not supported</string>
+    <string name="drm_error_body">This service requires a level of copy protection that TV web browsers don\'t support. Playback may fail or be limited to low quality.</string>
 </resources>

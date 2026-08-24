@@ -3,16 +3,23 @@ package com.example.tvbrowser.input
 import android.view.KeyEvent
 import android.webkit.WebView
 import com.example.tvbrowser.ui.browser.BrowserOverlayController
+import com.example.tvbrowser.web.FullscreenController
 
 class RemoteInputHandler(
     private val webView: WebView,
     private val overlay: BrowserOverlayController,
     private val mediaKeys: MediaKeyInjector,
-    private val onExit: () -> Unit
+    private val onExit: () -> Unit,
+    private val fullscreen: FullscreenController? = null
 ) {
 
     fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean = when (keyCode) {
         KeyEvent.KEYCODE_BACK -> when {
+            fullscreen?.isInFullscreen() == true -> {
+                fullscreen.exitFullscreen()
+                webView.requestFocus()
+                true
+            }
             overlay.isVisible -> {
                 overlay.hide()
                 webView.requestFocus()

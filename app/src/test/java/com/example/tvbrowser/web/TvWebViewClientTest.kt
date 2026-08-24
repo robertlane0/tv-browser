@@ -4,6 +4,7 @@ import android.webkit.WebView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.tvbrowser.input.CssInjector
 import com.example.tvbrowser.input.WebViewTestHost
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -61,5 +62,43 @@ class TvWebViewClientTest {
         client.doUpdateVisitedHistory(detached, "https://service.example.tv", false)
 
         assertNull(shadowOf(detached).lastEvaluatedJavascript)
+    }
+
+    @Test
+    fun onPageStartedForcesFullscreenTeardownForStuckContainer() {
+        val fullscreen = RecordingFullscreen()
+        val guarded = TvWebViewClient(CssInjector { "#00BFFF" }, fullscreen)
+
+        guarded.onPageStarted(webView, "https://service.example.tv/next", null)
+
+        assertEquals(1, fullscreen.teardownCalls)
+    }
+
+    @Test
+    fun onPageStartedRunsInjectedFallbackInjection() {
+        val injectedViews = mutableListOf<WebView>()
+        val hooked = TvWebViewClient(
+            CssInjector { "#00BFFF" },
+            onPageStartedInjection = { injectedViews.add(it) }
+        )
+
+        hooked.onPageStarted(webView, "https://service.example.tv/next", null)
+
+        assertEquals(listOf(webView), injectedViews)
+    }
+
+    private class RecordingFullscreen : FullscreenController {
+        var teardownCalls = 0
+            private set
+
+        override fun isInFullscreen(): Boolean = true
+
+        override fun exitFullscreen() {
+            teardownCalls++
+        }
+
+        override fun forceTeardown() {
+            teardownCalls++
+        }
     }
 }

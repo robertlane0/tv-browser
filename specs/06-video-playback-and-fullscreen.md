@@ -1,9 +1,9 @@
 ---
 title: "Video Playback and Fullscreen Handling"
-version: "1.0.0"
+version: "1.1.0"
 status: "Draft"
 module: "media"
-last_updated: "2026-08-22"
+last_updated: "2026-08-24"
 ---
 
 # Video Playback and Fullscreen Handling
@@ -137,7 +137,12 @@ class TvWebChromeClient(
 EME failure detection: listen for `DOMException` on
 `navigator.requestMediaKeySystemAccess` via an injected error hook; surface a
 distinct "DRM not supported by this service on TV browsers" card rather than a
-generic network error.
+generic network error. On WebView builds where the EME API is absent
+entirely (some AOSP/system WebView providers), the hook installs a rejecting
+`requestMediaKeySystemAccess` stub that both throws the standard
+`NotSupportedError` to the site and reports the DRM category, so DRM-dependent
+services surface the same card; non-DRM sites never call the API and are
+unaffected.
 
 ## 6. Error Handling and Edge Cases
 
@@ -148,13 +153,25 @@ generic network error.
 | `onHideCustomView` never delivered (site bug, e.g., navigation while fullscreen) | Stuck black container | `TvWebViewClient.onPageStarted` MUST force `exitFullscreen()` |
 | HDMI hotplug / CEC standby | Activity paused mid-playback | `onPause` calls `webView.onPause()` (see [01](./01-architecture-overview.md) §8); playback resumes on `onResume` |
 | Codec unsupported by WebView build (e.g., HEVC on old provider) | `MEDIA_ERR_SRC_NOT_SUPPORTED` | Provider version warning from [02](./02-project-setup-and-dependencies.md) §7; document per-service |
-| Audio focus loss (notification, voice search, second app) | Video keeps playing over other audio | Register `AudioManager.OnAudioFocusChangeListener`; on `AUDIOFOCUS_LOSS` call `MediaKeyInjector.togglePlayPause()` to pause; on `AUDIOFOCUS_LOSS_TRANSIENT` pause; on `AUDIOFOCUS_GAIN` do NOT auto-resume (user presses play) |
+| Audio focus loss (notification, voice search, second app) | Video keeps playing over other audio | Register `AudioManager.OnAudioFocusChangeListener`; on `AUDIOFOCUS_LOSS` pause playback (only if playing); on `AUDIOFOCUS_LOSS_TRANSIENT` pause; on `AUDIOFOCUS_GAIN` do NOT auto-resume (user presses play) |
 | Renderer process death during fullscreen | `onRenderProcessGone(true)` while custom view attached | Call `exitFullscreen()` before returning `true` from the callback; then follow the recovery flow in [09](./09-error-handling-and-recovery.md) §5 |
 | `FLAG_KEEP_SCREEN_ON` leak after abnormal exit | Screen never sleeps after crash-adjacent flow | Flag is added and cleared only inside `onShowCustomView`/`onHideCustomView`; `BrowserActivity.onDestroy` MUST also clear it defensively |
 | EME license request stalls (network flap) | Spinner forever, no error | Inject a 15 s watchdog: if `waiting` event persists and no `progress`, surface retry card via [09](./09-error-handling-and-recovery.md) §4 |
 | Site overrides `requestFullscreen` with a no-op (TV UA detected) | Fullscreen button does nothing | Switch UA mode to `DESKTOP` per [04](./04-user-agent-strategy.md) §5; if already desktop, record domain in [12](./12-testing-and-validation-matrix.md) §4 as unsupported |
 
-## 7. Cross-References
+## 7. Architecture Decisions
+
+- **AD-1 (v1.1.0): Audio-focus loss pauses instead of toggling.** The v1.0.0
+  text prescribed calling `MediaKeyInjector.togglePlayPause()` on
+  `AUDIOFOCUS_LOSS`. Toggling would *resume* a video the user had already
+  paused, directly contradicting the "no auto-resume without user intent"
+  rule in the same row. The audio-focus path therefore uses a pause-only
+  injection (`pauseIfPlaying()`, no-op when nothing is playing); the remote
+  Play/Pause key keeps the toggle behavior per
+  [05](./05-input-and-dpad-navigation.md) §6. Verified on the API 34 TV
+  emulator (T-01, T-02, fullscreen smoke test, EME card round trip).
+
+## 8. Cross-References
 
 - WebView settings that playback depends on (`mediaPlaybackRequiresUserGesture`,
   hardware layers): [03-webview-configuration.md](./03-webview-configuration.md) §2, §6

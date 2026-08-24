@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="drm_error_card_background">#F2000000</color>
+    <color name="drm_error_body_text">#DDFFFFFF</color>
+</resources>

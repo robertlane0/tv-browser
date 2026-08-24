@@ -3,14 +3,17 @@ package com.example.tvbrowser.ui.browser
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
+import android.webkit.WebChromeClient
 import android.webkit.WebView
-import android.widget.FrameLayout
+import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.tvbrowser.R
+import com.example.tvbrowser.bridge.JsBridge
 import com.example.tvbrowser.data.Bookmark
 import com.example.tvbrowser.data.UaMode
 import com.example.tvbrowser.web.TvWebViewClient
+import com.example.tvbrowser.web.TvWebChromeClient
 import com.example.tvbrowser.web.UserAgentProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -183,12 +186,82 @@ class WebViewFragmentTest {
         }
         assertEquals(null, shadowOf(webView).lastEvaluatedJavascript)
     }
+
+    @Test
+    fun installsTvWebChromeClientForFullscreenHandling() {
+        val (_, webView) = launch()
+
+        assertTrue(shadowOf(webView).webChromeClient is TvWebChromeClient)
+    }
+
+    @Test
+    fun backKeyExitsFullscreenBeforeHistoryThroughFragment() {
+        val (controller, webView) = launch()
+        val fragment = controller.get().supportFragmentManager.fragments
+            .filterIsInstance<WebViewFragment>().first()
+        shadowOf(webView).pushEntryToHistory("https://service.example.tv/first")
+        val chrome = fragment.activeChromeClient!!
+        chrome.onShowCustomView(
+            View(controller.get()),
+            object : WebChromeClient.CustomViewCallback {
+                override fun onCustomViewHidden() {
+                    chrome.onHideCustomView()
+                }
+            }
+        )
+
+        assertTrue(
+            fragment.dispatchKeyDown(
+                KeyEvent.KEYCODE_BACK,
+                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)
+            )
+        )
+
+        assertFalse(
+            controller.get().findViewById<View>(R.id.fullscreen_container).isVisible
+        )
+        assertEquals(0, shadowOf(webView).goBackInvocations)
+    }
+
+    @Test
+    fun emeDrmCardStartsHiddenShowsOnHookAndDismissesWithBack() {
+        val (controller, _) = launch()
+        val activity = controller.get()
+        val fragment = activity.supportFragmentManager.fragments
+            .filterIsInstance<WebViewFragment>().first()
+        val card = activity.findViewById<View>(R.id.drm_error_card)
+        assertEquals(View.GONE, card.visibility)
+
+        fragment.activeDrmCard!!.show()
+
+        assertEquals(View.VISIBLE, card.visibility)
+        assertTrue(card.isFocused)
+
+        card.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK))
+        card.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK))
+
+        assertEquals(View.GONE, card.visibility)
+        assertFalse(
+            "focus must leave the dismissed DRM card",
+            card.isFocused
+        )
+    }
+
+    @Test
+    fun registersTvBrowserJavascriptInterfaceForEmeReports() {
+        val (_, webView) = launch()
+
+        assertTrue(
+            shadowOf(webView).getJavascriptInterface(JsBridge.JS_INTERFACE_NAME) is JsBridge
+        )
+    }
+
 }
 
 class FragmentHostActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(FrameLayout(this).apply { id = R.id.browser_container })
+        setContentView(R.layout.activity_browser)
     }
 }

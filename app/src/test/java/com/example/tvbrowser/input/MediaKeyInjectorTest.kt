@@ -58,6 +58,16 @@ class MediaKeyInjectorTest {
     }
 
     @Test
+    fun audioFocusPauseNeverPlays() {
+        injector.pauseIfPlaying()
+
+        val js = shadowOf(webView).lastEvaluatedJavascript!!
+        assertTrue(js.contains("if(!v||v.paused)return"))
+        assertTrue(js.contains("v.pause()"))
+        assertTrue(!js.contains("v.play()"))
+    }
+
+    @Test
     fun detachedWebViewSilentlyIgnoresMediaKeys() {
         val detached = host.detachedWebView()
         val detachedInjector = MediaKeyInjector(detached)

@@ -9,13 +9,19 @@ import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.widget.ProgressBar
 import androidx.fragment.app.Fragment
 import com.example.tvbrowser.R
+import com.example.tvbrowser.bridge.JsBridge
 import com.example.tvbrowser.data.Bookmark
+import com.example.tvbrowser.error.DrmCardController
+import com.example.tvbrowser.input.AudioFocusController
 import com.example.tvbrowser.input.CssInjector
 import com.example.tvbrowser.input.MediaKeyInjector
 import com.example.tvbrowser.input.RemoteInputHandler
+import com.example.tvbrowser.web.EmeErrorHook
 import com.example.tvbrowser.web.TvWebViewClient
+import com.example.tvbrowser.web.TvWebChromeClient
 import com.example.tvbrowser.web.UserAgentProvider
 import com.example.tvbrowser.web.WebViewConfigurator
 
@@ -23,6 +29,9 @@ class WebViewFragment : Fragment() {
 
     private var webView: WebView? = null
     private var inputHandler: RemoteInputHandler? = null
+    private var chromeClient: TvWebChromeClient? = null
+    private var audioFocus: AudioFocusController? = null
+    private var drmCard: DrmCardController? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -50,10 +59,39 @@ class WebViewFragment : Fragment() {
             WebSettings.getDefaultUserAgent(requireContext())
         }).configure(webView, bookmark)
 
+        val drmCard = DrmCardController(
+            requireActivity().findViewById(R.id.drm_error_card)
+        ) { webView.requestFocus() }
+        this.drmCard = drmCard
+
+        webView.addJavascriptInterface(
+            JsBridge { drmCard.show() },
+            JsBridge.JS_INTERFACE_NAME
+        )
+        val emeHook = EmeErrorHook()
+        emeHook.attach(webView)
+
+        val mediaKeys = MediaKeyInjector(webView)
+        val audioFocus = AudioFocusController(requireContext(), mediaKeys)
+        this.audioFocus = audioFocus
+
+        val chromeClient = TvWebChromeClient(
+            requireActivity(),
+            requireActivity().findViewById(R.id.fullscreen_container),
+            webView,
+            requireActivity().findViewById<ProgressBar>(R.id.web_progress),
+            titleCallback = { activity?.title = it },
+            audioFocus = audioFocus
+        )
+        this.chromeClient = chromeClient
+        webView.webChromeClient = chromeClient
+
         webView.webViewClient = TvWebViewClient(
             CssInjector { name ->
                 requireContext().assets.open(name).bufferedReader().use { it.readText() }
-            }
+            },
+            chromeClient,
+            emeHook::injectIfNeeded
         )
 
         val overlay = object : BrowserOverlayController {
@@ -66,8 +104,9 @@ class WebViewFragment : Fragment() {
         inputHandler = RemoteInputHandler(
             webView,
             overlay,
-            MediaKeyInjector(webView),
-            onExit = { activity?.finish() }
+            mediaKeys,
+            onExit = { activity?.finish() },
+            fullscreen = chromeClient
         )
 
         webView.loadUrl(bookmark.url)
@@ -85,6 +124,16 @@ class WebViewFragment : Fragment() {
         return true
     }
 
+    fun forceExitFullscreen() {
+        chromeClient?.exitFullscreen()
+    }
+
+    internal val activeChromeClient: TvWebChromeClient?
+        get() = chromeClient
+
+    internal val activeDrmCard: DrmCardController?
+        get() = drmCard
+
     override fun onResume() {
         super.onResume()
         webView?.onResume()
@@ -97,6 +146,10 @@ class WebViewFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        audioFocus?.abandon()
+        drmCard = null
+        chromeClient = null
+        inputHandler = null
         webView?.let { dying ->
             (dying.parent as? ViewGroup)?.removeView(dying)
             dying.destroy()

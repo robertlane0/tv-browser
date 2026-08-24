@@ -9,6 +9,11 @@ class MediaKeyInjector(private val webView: WebView) {
              v.paused?v.play():v.pause();})();"""
     )
 
+    fun pauseIfPlaying() = eval(
+        """(function(){var v=document.querySelector('video');if(!v||v.paused)return;
+             v.pause();})();"""
+    )
+
     fun seekBy(deltaMs: Long) = eval(
         """(function(){var v=document.querySelector('video');if(!v)return;
              v.currentTime=Math.max(0,Math.min(v.duration||1e9,

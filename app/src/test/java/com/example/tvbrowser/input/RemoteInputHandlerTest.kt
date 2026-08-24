@@ -60,7 +60,10 @@ class RemoteInputHandlerTest {
         webView = host.attach(RecordingFocusWebView(host.activity))
         overlay = FakeOverlay()
         exitCount = 0
-        handler = RemoteInputHandler(webView, overlay, MediaKeyInjector(webView)) { exitCount++ }
+        handler = RemoteInputHandler(
+            webView, overlay, MediaKeyInjector(webView),
+            onExit = { exitCount++ }
+        )
     }
 
     private fun keyDown(keyCode: Int, repeatCount: Int = 0): Boolean =
@@ -138,6 +141,45 @@ class RemoteInputHandlerTest {
     }
 
     @Test
+    fun backExitsFullscreenBeforeOverlayAndHistory() {
+        val fullscreen = RecordingFullscreen(active = true)
+        val handlerWithFullscreen = RemoteInputHandler(
+            webView, overlay, MediaKeyInjector(webView), onExit = { exitCount++ },
+            fullscreen = fullscreen
+        )
+        overlay.isVisible = true
+        shadowOf(webView).pushEntryToHistory("https://service.example.tv/first")
+
+        assertTrue(handlerWithFullscreen.onKeyDown(
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)
+        ))
+
+        assertEquals(1, fullscreen.exitCalls)
+        assertTrue("overlay must stay untouched while fullscreen owns Back", overlay.isVisible)
+        assertEquals(1, webView.requestFocusCalls)
+        assertEquals(0, shadowOf(webView).goBackInvocations)
+        assertEquals(0, exitCount)
+    }
+
+    @Test
+    fun inactiveFullscreenControllerDoesNotStealBack() {
+        val fullscreen = RecordingFullscreen(active = false)
+        val handlerWithFullscreen = RemoteInputHandler(
+            webView, overlay, MediaKeyInjector(webView), onExit = { exitCount++ },
+            fullscreen = fullscreen
+        )
+
+        assertTrue(handlerWithFullscreen.onKeyDown(
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)
+        ))
+
+        assertEquals(0, fullscreen.exitCalls)
+        assertEquals(1, exitCount)
+    }
+
+    @Test
     fun playPauseInjectsToggleJs() {
         assertTrue(keyDown(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE))
 
@@ -186,6 +228,22 @@ class RemoteInputHandlerTest {
             KeyEvent.KEYCODE_ENTER
         ).forEach { keyCode ->
             assertFalse("key $keyCode must not be classified as media key", handler.isMediaKey(keyCode))
+        }
+    }
+
+    private class RecordingFullscreen(private val active: Boolean) :
+        com.example.tvbrowser.web.FullscreenController {
+        var exitCalls = 0
+            private set
+
+        override fun isInFullscreen(): Boolean = active
+
+        override fun exitFullscreen() {
+            exitCalls++
+        }
+
+        override fun forceTeardown() {
+            exitCalls++
         }
     }
 }
