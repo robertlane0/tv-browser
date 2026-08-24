@@ -171,4 +171,21 @@ class RemoteInputHandlerTest {
 
         assertEquals(scriptAfterFirstPress, shadowOf(webView).lastEvaluatedJavascript)
     }
+
+    @Test
+    fun mediaKeyClassifierMatchesOnlyMediaKeys() {
+        RemoteInputHandler.MEDIA_KEYS.forEach { keyCode ->
+            assertTrue("key $keyCode must be classified as media key", handler.isMediaKey(keyCode))
+        }
+
+        intArrayOf(
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_MENU,
+            KeyEvent.KEYCODE_ENTER
+        ).forEach { keyCode ->
+            assertFalse("key $keyCode must not be classified as media key", handler.isMediaKey(keyCode))
+        }
+    }
 }

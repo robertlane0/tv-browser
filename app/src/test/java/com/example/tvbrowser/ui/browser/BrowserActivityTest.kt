@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.tvbrowser.R
 import com.example.tvbrowser.data.Bookmark
 import com.example.tvbrowser.data.UaMode
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -86,6 +87,43 @@ class BrowserActivityTest {
         assertFalse(
             controller.get().onKeyDown(
                 KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN)
+            )
+        )
+    }
+
+    @Test
+    fun activityDispatchInterceptsMediaKeyDownBeforeWebView() {
+        val controller = launch()
+        val webView = controller.get().findViewById<WebView>(R.id.web_view)
+
+        val handled = controller.get().dispatchKeyEvent(
+            KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD)
+        )
+
+        assertTrue(handled)
+        assertTrue(shadowOf(webView).lastEvaluatedJavascript!!.contains("(10000/1000)"))
+    }
+
+    @Test
+    fun activityDispatchConsumesMediaKeyUpWithoutInjecting() {
+        val controller = launch()
+        val webView = controller.get().findViewById<WebView>(R.id.web_view)
+
+        val handled = controller.get().dispatchKeyEvent(
+            KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_REWIND)
+        )
+
+        assertTrue(handled)
+        assertEquals(null, shadowOf(webView).lastEvaluatedJavascript)
+    }
+
+    @Test
+    fun activityDispatchFallsThroughForNonMediaKeys() {
+        val controller = launch()
+
+        assertFalse(
+            controller.get().dispatchKeyEvent(
                 KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN)
             )
         )

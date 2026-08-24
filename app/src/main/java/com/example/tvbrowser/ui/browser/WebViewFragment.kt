@@ -76,6 +76,15 @@ class WebViewFragment : Fragment() {
     fun dispatchKeyDown(keyCode: Int, event: KeyEvent): Boolean =
         inputHandler?.onKeyDown(keyCode, event) ?: false
 
+    fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val handler = inputHandler ?: return false
+        if (!handler.isMediaKey(event.keyCode)) return false
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            handler.onKeyDown(event.keyCode, event)
+        }
+        return true
+    }
+
     override fun onResume() {
         super.onResume()
         webView?.onResume()

@@ -27,6 +27,12 @@ class BrowserActivity : FragmentActivity() {
         }
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val fragment = supportFragmentManager.findFragmentById(R.id.browser_container) as? WebViewFragment
+        if (fragment?.dispatchKeyEvent(event) == true) return true
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         val keyEvent = event ?: return super.onKeyDown(keyCode, event)
         val handled = (supportFragmentManager.findFragmentById(R.id.browser_container) as? WebViewFragment)

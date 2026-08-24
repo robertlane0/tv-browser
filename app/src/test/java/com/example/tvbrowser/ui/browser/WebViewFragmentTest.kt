@@ -136,6 +136,53 @@ class WebViewFragmentTest {
                 )
         )
     }
+
+    @Test
+    fun keyEventDispatchRoutesMediaKeyDownToInjector() {
+        val (controller, webView) = launch()
+
+        val handled = controller.get().supportFragmentManager.fragments
+            .filterIsInstance<WebViewFragment>().first()
+            .dispatchKeyEvent(
+                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+            )
+
+        assertTrue(handled)
+        assertTrue(shadowOf(webView).lastEvaluatedJavascript!!.contains("v.paused?v.play():v.pause()"))
+    }
+
+    @Test
+    fun keyEventDispatchConsumesMediaKeyUpWithoutInjecting() {
+        val (controller, webView) = launch()
+
+        val handled = controller.get().supportFragmentManager.fragments
+            .filterIsInstance<WebViewFragment>().first()
+            .dispatchKeyEvent(
+                KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+            )
+
+        assertTrue(handled)
+        assertEquals(null, shadowOf(webView).lastEvaluatedJavascript)
+    }
+
+    @Test
+    fun keyEventDispatchFallsThroughForNonMediaKeys() {
+        val (controller, webView) = launch()
+
+        intArrayOf(
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_MENU
+        ).forEach { keyCode ->
+            assertFalse(
+                "key $keyCode must fall through keyEvent dispatch",
+                controller.get().supportFragmentManager.fragments
+                    .filterIsInstance<WebViewFragment>().first()
+                    .dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+            )
+        }
+        assertEquals(null, shadowOf(webView).lastEvaluatedJavascript)
+    }
 }
 
 class FragmentHostActivity : FragmentActivity() {
