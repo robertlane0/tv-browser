@@ -3,22 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory android:title="@string/settings_category_general">
-        <ListPreference
-            android:defaultValue="DESKTOP"
-            android:entries="@array/settings_default_ua_labels"
-            android:entryValues="@array/settings_default_ua_values"
+        <Preference
             android:key="default_ua"
             android:summary="@string/settings_default_ua_summary"
             android:title="@string/settings_default_ua" />
 
-        <ListPreference
+        <Preference
             android:key="session_ua"
             android:title="@string/session_ua_pref_title" />
 
-        <ListPreference
-            android:defaultValue="100"
-            android:entries="@array/settings_text_zoom_labels"
-            android:entryValues="@array/settings_text_zoom_values"
+        <Preference
             android:key="text_zoom"
             android:title="@string/settings_text_zoom" />
 

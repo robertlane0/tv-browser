@@ -20,10 +20,10 @@ class UaPickerStep : GuidedStepSupportFragment() {
     private lateinit var repository: BookmarkRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         @Suppress("DEPRECATION")
         bookmark = requireArguments().getParcelable(ARG_BOOKMARK)!!
         repository = BookmarkRepository(AppDatabase.getInstance(requireContext()).bookmarkDao())
+        super.onCreate(savedInstanceState)
     }
 
     override fun onCreateGuidance(savedInstanceState: Bundle?): GuidanceStylist.Guidance =

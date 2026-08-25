@@ -124,6 +124,15 @@ class AddressEntryStepsTest {
     }
 
     @Test
+    fun keyGridDraftPreviewIsSingleLine() {
+        val step = DpadKeyGridStep.newInstance("https://service.example.tv/some/long/path")
+        addStep(step)
+
+        val draft = step.view!!.findViewById<android.widget.TextView>(R.id.key_grid_draft)
+        assertTrue("long drafts must not wrap the grid off-screen", draft.isSingleLine)
+    }
+
+    @Test
     fun keyGridBuildsDraftAndRejectsEmptyCommit() {
         val step = DpadKeyGridStep.newInstance("")
         addStep(step)

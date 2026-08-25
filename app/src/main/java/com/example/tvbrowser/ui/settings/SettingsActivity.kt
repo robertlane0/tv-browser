@@ -7,7 +7,7 @@ import androidx.fragment.app.FragmentActivity
 import com.example.tvbrowser.R
 import com.example.tvbrowser.data.Bookmark
 
-class SettingsActivity : FragmentActivity() {
+class SettingsActivity : FragmentActivity(), SettingsRadioStep.Host {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,6 +19,11 @@ class SettingsActivity : FragmentActivity() {
                 .replace(R.id.settings_container, SettingsFragment.newInstance(intent))
                 .commit()
         }
+    }
+
+    override fun onRadioPicked(requestKey: String, value: String) {
+        (supportFragmentManager.findFragmentById(R.id.settings_container) as? SettingsFragment)
+            ?.handleRadioPicked(requestKey, value)
     }
 
     companion object {

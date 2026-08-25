@@ -60,6 +60,8 @@ class DpadKeyGridStep : androidx.fragment.app.Fragment() {
             minHeight = dp(56)
             isFocusable = true
             isFocusableInTouchMode = true
+            setSingleLine(true)
+            ellipsize = android.text.TextUtils.TruncateAt.START
         }
         root.addView(
             draftView,

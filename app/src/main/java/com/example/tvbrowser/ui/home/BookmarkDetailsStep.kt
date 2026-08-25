@@ -17,9 +17,9 @@ class BookmarkDetailsStep : GuidedStepSupportFragment() {
     private var existing: Bookmark? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         @Suppress("DEPRECATION")
         existing = requireArguments().getParcelable(ARG_BOOKMARK)
+        super.onCreate(savedInstanceState)
     }
 
     override fun onCreateGuidance(savedInstanceState: Bundle?): GuidanceStylist.Guidance =

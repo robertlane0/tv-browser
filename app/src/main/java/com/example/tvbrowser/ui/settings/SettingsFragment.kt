@@ -9,7 +9,6 @@ import android.webkit.WebStorage
 import android.widget.Toast
 import androidx.leanback.preference.LeanbackPreferenceFragmentCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.SwitchPreference
 import androidx.webkit.WebViewCompat
@@ -34,6 +33,9 @@ class SettingsFragment : LeanbackPreferenceFragmentCompat() {
     private var sessionBookmark: Bookmark? = null
 
     private val writeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    @Volatile
+    private var cachedGlobalUa: UaMode = UaMode.DESKTOP
 
     override fun onCreate(savedInstanceState: Bundle?) {
         preferences = PreferencesRepository.getInstance(requireContext())
@@ -60,49 +62,50 @@ class SettingsFragment : LeanbackPreferenceFragmentCompat() {
     }
 
     private fun configureDefaultUa() {
-        val pref = findPreference<ListPreference>(KEY_DEFAULT_UA) ?: return
-        applyUaOptions(pref)
+        val pref = findPreference<Preference>(KEY_DEFAULT_UA) ?: return
         lifecycleScope.launch {
-            pref.value = preferences.globalUaDefault().first().name
+            cachedGlobalUa = preferences.globalUaDefault().first()
+            pref.summary = "${cachedGlobalUa.label(requireContext())}  ·  ${getString(R.string.settings_default_ua_summary)}"
         }
-        pref.setOnPreferenceChangeListener { _, newValue ->
-            val mode = runCatching { UaMode.valueOf(newValue.toString()) }.getOrNull() ?: return@setOnPreferenceChangeListener false
-            if (mode == UaMode.NATIVE_TV && !isDebuggable()) return@setOnPreferenceChangeListener false
-            writeScope.launch { preferences.setGlobalUaDefault(mode) }
+        pref.setOnPreferenceClickListener {
+            val (labels, values) = uaOptions()
+            openRadio(KEY_DEFAULT_UA, getString(R.string.settings_default_ua), labels, values, cachedGlobalUa.name)
             true
         }
     }
 
     private fun configureSessionUa() {
-        val pref = findPreference<ListPreference>(KEY_SESSION_UA) ?: return
+        val pref = findPreference<Preference>(KEY_SESSION_UA) ?: return
         val bookmark = sessionBookmark
         if (bookmark == null) {
             pref.isVisible = false
             return
         }
-        applyUaOptions(pref)
-        pref.value = bookmark.uaMode.name
-        pref.setOnPreferenceChangeListener { _, newValue ->
-            val mode = runCatching { UaMode.valueOf(newValue.toString()) }.getOrNull() ?: return@setOnPreferenceChangeListener false
-            persistSessionBookmark(bookmark.copy(uaMode = mode))
-            showReloadConfirmation()
-            false
+        pref.summary = bookmark.uaMode.label(requireContext())
+        pref.setOnPreferenceClickListener {
+            val (labels, values) = uaOptions()
+            openRadio(KEY_SESSION_UA, getString(R.string.session_ua_pref_title), labels, values, bookmark.uaMode.name)
+            true
         }
     }
 
     private fun configureTextZoom() {
-        val pref = findPreference<ListPreference>(KEY_TEXT_ZOOM) ?: return
+        val pref = findPreference<Preference>(KEY_TEXT_ZOOM) ?: return
         val bookmark = sessionBookmark
         if (bookmark == null) {
             pref.isVisible = false
             return
         }
-        pref.value = bookmark.textZoomPercent.toString()
-        pref.setOnPreferenceChangeListener { _, newValue ->
-            val zoom = newValue.toString().toIntOrNull() ?: return@setOnPreferenceChangeListener false
-            persistSessionBookmark(bookmark.copy(textZoomPercent = zoom))
-            showReloadConfirmation()
-            false
+        pref.summary = "${bookmark.textZoomPercent}%"
+        pref.setOnPreferenceClickListener {
+            openRadio(
+                KEY_TEXT_ZOOM,
+                getString(R.string.settings_text_zoom),
+                zoomLabels(),
+                zoomValues(),
+                bookmark.textZoomPercent.toString()
+            )
+            true
         }
     }
 
@@ -142,23 +145,61 @@ class SettingsFragment : LeanbackPreferenceFragmentCompat() {
         pref.summary = "${getString(R.string.app_name)}  v${version ?: "?"}"
     }
 
-    private fun applyUaOptions(pref: ListPreference) {
-        if (isDebuggable()) {
-            val labels = requireContext().resources.getStringArray(R.array.settings_default_ua_labels)
-                .toMutableList()
-            val values = requireContext().resources.getStringArray(R.array.settings_default_ua_values)
-                .toMutableList()
-            labels.add(getString(R.string.ua_mode_native_tv_debug))
-            values.add(UaMode.NATIVE_TV.name)
-            pref.entries = labels.toTypedArray()
-            pref.entryValues = values.toTypedArray()
-        } else {
-            pref.entries =
-                requireContext().resources.getStringArray(R.array.settings_default_ua_labels)
-            pref.entryValues =
-                requireContext().resources.getStringArray(R.array.settings_default_ua_values)
+    internal fun handleRadioPicked(requestKey: String, value: String): Boolean {
+        when (requestKey) {
+            KEY_DEFAULT_UA -> {
+                val mode = modeOrNull(value) ?: return false
+                if (mode == UaMode.NATIVE_TV && !isDebuggable()) return false
+                writeScope.launch { preferences.setGlobalUaDefault(mode) }
+                cachedGlobalUa = mode
+                findPreference<Preference>(KEY_DEFAULT_UA)?.summary = mode.label(requireContext())
+                return true
+            }
+            KEY_SESSION_UA -> {
+                val bookmark = sessionBookmark ?: return false
+                val mode = modeOrNull(value) ?: return false
+                persistSessionBookmark(bookmark.copy(uaMode = mode))
+                findPreference<Preference>(KEY_SESSION_UA)?.summary = mode.label(requireContext())
+                showReloadConfirmation()
+                return true
+            }
+            KEY_TEXT_ZOOM -> {
+                val bookmark = sessionBookmark ?: return false
+                val zoom = value.toIntOrNull() ?: return false
+                persistSessionBookmark(bookmark.copy(textZoomPercent = zoom))
+                findPreference<Preference>(KEY_TEXT_ZOOM)?.summary = "$zoom%"
+                showReloadConfirmation()
+                return true
+            }
+            else -> return false
         }
     }
+
+    private fun openRadio(key: String, title: String, labels: List<String>, values: List<String>, selected: String) {
+        SettingsRadioStep.newInstance(key, title, labels, values, selected)
+            .also { step ->
+                parentFragmentManager.beginTransaction()
+                    .add(android.R.id.content, step)
+                    .addToBackStack(null)
+                    .commit()
+            }
+    }
+
+    private fun uaOptions(): Pair<List<String>, List<String>> {
+        val labels = requireContext().resources.getStringArray(R.array.settings_default_ua_labels).toMutableList()
+        val values = requireContext().resources.getStringArray(R.array.settings_default_ua_values).toMutableList()
+        if (isDebuggable()) {
+            labels.add(getString(R.string.ua_mode_native_tv_debug))
+            values.add(UaMode.NATIVE_TV.name)
+        }
+        return labels to values
+    }
+
+    private fun zoomLabels(): List<String> =
+        requireContext().resources.getStringArray(R.array.settings_text_zoom_labels).toList()
+
+    private fun zoomValues(): List<String> =
+        requireContext().resources.getStringArray(R.array.settings_text_zoom_values).toList()
 
     private fun persistSessionBookmark(updated: Bookmark) {
         sessionBookmark = updated
@@ -208,13 +249,23 @@ class SettingsFragment : LeanbackPreferenceFragmentCompat() {
         requireContext().applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
 
     companion object {
-        private const val KEY_DEFAULT_UA = "default_ua"
-        private const val KEY_SESSION_UA = "session_ua"
-        private const val KEY_TEXT_ZOOM = "text_zoom"
+        const val KEY_DEFAULT_UA = "default_ua"
+        const val KEY_SESSION_UA = "session_ua"
+        const val KEY_TEXT_ZOOM = "text_zoom"
         private const val KEY_CONTENT_FILTER = "content_filter_enabled"
         private const val KEY_CLEAR_SESSION = "clear_session_data"
         private const val KEY_BROWSER_ENGINE = "browser_engine"
         private const val KEY_ABOUT = "about"
+
+        private fun modeOrNull(value: String): UaMode? =
+            runCatching { UaMode.valueOf(value) }.getOrNull()
+
+        private fun UaMode.label(context: android.content.Context): String =
+            when (this) {
+                UaMode.DESKTOP -> context.getString(R.string.ua_mode_desktop)
+                UaMode.MOBILE -> context.getString(R.string.ua_mode_mobile)
+                UaMode.NATIVE_TV -> context.getString(R.string.ua_mode_native_tv_debug)
+            }
 
         fun newInstance(intent: Intent): SettingsFragment =
             SettingsFragment().apply { arguments = intent.extras ?: Bundle() }

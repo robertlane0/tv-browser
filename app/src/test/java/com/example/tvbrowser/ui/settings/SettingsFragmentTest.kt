@@ -3,7 +3,6 @@ package com.example.tvbrowser.ui.settings
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Looper
-import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -69,11 +68,8 @@ class SettingsFragmentTest {
         controller.get().supportFragmentManager.fragments.filterIsInstance<SettingsFragment>().first()
 
     @Test
-    fun globalDefaultUaListenerPersistsToDataStore() = runBlocking {
-        val pref = fragment().findPreference<ListPreference>("default_ua")!!
-        assertNotNull(pref.onPreferenceChangeListener)
-
-        assertTrue(pref.onPreferenceChangeListener!!.onPreferenceChange(pref, "MOBILE"))
+    fun globalDefaultUaPickPersistsToDataStore() = runBlocking {
+        assertTrue(fragment().handleRadioPicked(SettingsFragment.KEY_DEFAULT_UA, "MOBILE"))
 
         awaitUntil { preferencesRepository().globalUaDefault().first() == UaMode.MOBILE }
     }
@@ -86,19 +82,15 @@ class SettingsFragmentTest {
             .add(android.R.id.content, SettingsFragment.newInstance(Intent()))
             .commitNow()
         val releaseFragment = fm.fragments.filterIsInstance<SettingsFragment>().last()
-        val pref = releaseFragment.findPreference<ListPreference>("default_ua")!!
-        assertFalse(pref.entryValues.contains("NATIVE_TV"))
-        assertTrue(fragment().findPreference<ListPreference>("default_ua")!!.isVisible)
+
+        assertFalse(releaseFragment.handleRadioPicked(SettingsFragment.KEY_DEFAULT_UA, "NATIVE_TV"))
+        assertTrue(releaseFragment.handleRadioPicked(SettingsFragment.KEY_DEFAULT_UA, "DESKTOP"))
+        assertTrue(fragment().findPreference<Preference>(SettingsFragment.KEY_DEFAULT_UA)!!.isVisible)
     }
 
     @Test
     fun sessionUaChangeShowsConfirmationAndReloadsOnlyOnConfirm() = runBlocking {
-        val pref = fragment().findPreference<ListPreference>("session_ua")!!
-        assertNotNull(pref.onPreferenceChangeListener)
-
-        val accepted = pref.onPreferenceChangeListener!!.onPreferenceChange(pref, "MOBILE")
-        assertFalse("persistence is handled by the bookmark repository", accepted)
-        idleMain()
+        assertTrue(fragment().handleRadioPicked(SettingsFragment.KEY_SESSION_UA, "MOBILE"))
 
         val dialog = ShadowAlertDialog.getLatestAlertDialog()
         assertNotNull("confirmation must be shown", dialog)
@@ -118,10 +110,7 @@ class SettingsFragmentTest {
 
     @Test
     fun decliningReloadConfirmationKeepsSettingsOpenWithoutResult() {
-        val pref = fragment().findPreference<ListPreference>("session_ua")!!
-
-        pref.onPreferenceChangeListener!!.onPreferenceChange(pref, "MOBILE")
-        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+        fragment().handleRadioPicked(SettingsFragment.KEY_SESSION_UA, "MOBILE")
 
         ShadowAlertDialog.getLatestAlertDialog()
             .getButton(DialogInterface.BUTTON_NEGATIVE).performClick()
@@ -133,9 +122,8 @@ class SettingsFragmentTest {
 
     @Test
     fun textZoomChangePersistsAndConfirmsBeforeReload() = runBlocking {
-        val pref = fragment().findPreference<ListPreference>("text_zoom")!!
+        assertTrue(fragment().handleRadioPicked(SettingsFragment.KEY_TEXT_ZOOM, "150"))
 
-        pref.onPreferenceChangeListener!!.onPreferenceChange(pref, "150")
         ShadowAlertDialog.getLatestAlertDialog()
             .getButton(DialogInterface.BUTTON_POSITIVE).performClick()
         shadowOf(Looper.getMainLooper()).idle()
@@ -152,9 +140,9 @@ class SettingsFragmentTest {
         ).setup()
         try {
             val f = fresh.get().supportFragmentManager.fragments.filterIsInstance<SettingsFragment>().first()
-            assertFalse(f.findPreference<ListPreference>("text_zoom")!!.isVisible)
-            assertFalse(f.findPreference<ListPreference>("session_ua")!!.isVisible)
-            assertTrue(f.findPreference<ListPreference>("default_ua")!!.isVisible)
+            assertFalse(f.findPreference<Preference>(SettingsFragment.KEY_TEXT_ZOOM)!!.isVisible)
+            assertFalse(f.findPreference<Preference>(SettingsFragment.KEY_SESSION_UA)!!.isVisible)
+            assertTrue(f.findPreference<Preference>(SettingsFragment.KEY_DEFAULT_UA)!!.isVisible)
         } finally {
             fresh.pause().stop().destroy()
         }
