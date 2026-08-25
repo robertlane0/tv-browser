@@ -2,4 +2,7 @@
 <resources>
     <color name="drm_error_card_background">#F2000000</color>
     <color name="drm_error_body_text">#DDFFFFFF</color>
+    <color name="overlay_scrim">#CC000000</color>
+    <color name="overlay_text">#FFFFFFFF</color>
+    <color name="security_cleartext">#FFC107</color>
 </resources>

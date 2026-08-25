@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="@string/settings_category_general">
+        <ListPreference
+            android:defaultValue="DESKTOP"
+            android:entries="@array/settings_default_ua_labels"
+            android:entryValues="@array/settings_default_ua_values"
+            android:key="default_ua"
+            android:summary="@string/settings_default_ua_summary"
+            android:title="@string/settings_default_ua" />
+
+        <ListPreference
+            android:key="session_ua"
+            android:title="@string/session_ua_pref_title" />
+
+        <ListPreference
+            android:defaultValue="100"
+            android:entries="@array/settings_text_zoom_labels"
+            android:entryValues="@array/settings_text_zoom_values"
+            android:key="text_zoom"
+            android:title="@string/settings_text_zoom" />
+
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="content_filter_enabled"
+            android:summary="@string/settings_cleanup_summary"
+            android:title="@string/settings_cleanup" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/settings_category_privacy">
+        <Preference
+            android:key="clear_session_data"
+            android:summary="@string/settings_clear_session_summary"
+            android:title="@string/settings_clear_session" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/settings_category_about">
+        <Preference
+            android:key="browser_engine"
+            android:selectable="false" />
+        <Preference
+            android:key="about"
+            android:selectable="false" />
+    </PreferenceCategory>
+</PreferenceScreen>

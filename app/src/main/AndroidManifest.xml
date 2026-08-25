@@ -49,5 +49,9 @@
             android:screenOrientation="landscape"
             android:configChanges="screenSize|screenLayout|keyboardHidden|orientation"
             android:theme="@style/Theme.Leanback.Immersive" />
+
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false" />
     </application>
 </manifest>

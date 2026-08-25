@@ -2,6 +2,7 @@ package com.example.tvbrowser.input
 
 import android.webkit.WebView
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -76,5 +77,35 @@ class MediaKeyInjectorTest {
         detachedInjector.seekBy(RemoteInputHandler.SEEK_STEP_MS)
 
         assertNull(shadowOf(detached).lastEvaluatedJavascript)
+    }
+
+    @Test
+    fun playPauseFlipsPlayingAssumption() {
+        assertFalse(injector.isPlayingAssumed)
+
+        injector.togglePlayPause()
+        assertTrue(injector.isPlayingAssumed)
+
+        injector.togglePlayPause()
+        assertFalse(injector.isPlayingAssumed)
+    }
+
+    @Test
+    fun seekImpliesPlaybackForAutoHideEligibility() {
+        assertFalse(injector.isPlayingAssumed)
+
+        injector.seekBy(RemoteInputHandler.SEEK_STEP_MS)
+
+        assertTrue(injector.isPlayingAssumed)
+    }
+
+    @Test
+    fun pauseClearsPlayingAssumption() {
+        injector.togglePlayPause()
+        assertTrue(injector.isPlayingAssumed)
+
+        injector.pauseIfPlaying()
+
+        assertFalse(injector.isPlayingAssumed)
     }
 }

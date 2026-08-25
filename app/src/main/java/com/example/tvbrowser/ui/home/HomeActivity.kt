@@ -13,11 +13,12 @@ import com.example.tvbrowser.data.AppDatabase
 import com.example.tvbrowser.data.PreferencesRepository
 import com.example.tvbrowser.gate.WebViewProviderGate
 import com.example.tvbrowser.ui.browser.BrowserActivity
+import com.example.tvbrowser.ui.settings.SettingsActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class HomeActivity : FragmentActivity(), HomeFragment.Callbacks, GateBlockedStep.Host {
+class HomeActivity : FragmentActivity(), HomeFragment.Callbacks, GateBlockedStep.Host, BookmarkDetailsStep.Host {
 
     private lateinit var preferences: PreferencesRepository
 
@@ -73,12 +74,17 @@ class HomeActivity : FragmentActivity(), HomeFragment.Callbacks, GateBlockedStep
     }
 
     override fun onAddServiceRequested() {
-        toastNotAvailableYet()
+        supportFragmentManager.beginTransaction()
+            .add(R.id.home_container, BookmarkDetailsStep.newInstance(null))
+            .addToBackStack(null)
+            .commit()
     }
 
     override fun onSettingsRequested() {
-        toastNotAvailableYet()
+        startActivity(SettingsActivity.createIntent(this))
     }
+
+    override fun stepContainerId(): Int = R.id.home_container
 
     override fun onServiceLongPressed(bookmark: Bookmark) {
         supportFragmentManager.beginTransaction()

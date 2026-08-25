@@ -13,7 +13,11 @@ class RemoteInputHandler(
     private val fullscreen: FullscreenController? = null
 ) {
 
-    fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean = when (keyCode) {
+    fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_MENU && fullscreen?.isInFullscreen() == true) {
+            return true
+        }
+        return when (keyCode) {
         KeyEvent.KEYCODE_BACK -> when {
             fullscreen?.isInFullscreen() == true -> {
                 fullscreen.exitFullscreen()
@@ -43,6 +47,7 @@ class RemoteInputHandler(
             true
         }
         else -> false
+        }
     }
 
     private inline fun consumeUnrepeated(event: KeyEvent, action: () -> Unit): Boolean {

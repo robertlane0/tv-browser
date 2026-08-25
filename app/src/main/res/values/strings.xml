@@ -22,4 +22,97 @@
 
     <string name="drm_error_title">Protected video not supported</string>
     <string name="drm_error_body">This service requires a level of copy protection that TV web browsers don\'t support. Playback may fail or be limited to low quality.</string>
+
+    <string name="overlay_back">Back</string>
+    <string name="overlay_forward">Forward</string>
+    <string name="overlay_refresh">Refresh</string>
+    <string name="overlay_home">Home</string>
+    <string name="overlay_address_hint">Enter address</string>
+    <string name="overlay_bookmark_add">Bookmark this page</string>
+    <string name="overlay_bookmark_remove">Remove bookmark</string>
+    <string name="overlay_settings">Settings</string>
+
+    <string name="address_step_title">Enter address</string>
+    <string name="address_step_description">Say or type an address, then select Done.</string>
+    <string name="address_step_error">That address is not valid. Try something like service.example.tv</string>
+    <string name="address_step_use_grid">Use D-Pad keyboard</string>
+    <string name="address_step_done">Done</string>
+    <string name="key_grid_title">Type an address</string>
+    <string name="key_grid_done">OK</string>
+    <string name="key_grid_delete">DEL</string>
+    <string name="key_grid_clear">CLR</string>
+
+    <string name="bookmark_details_title_add">Add service</string>
+    <string name="bookmark_details_title_edit">Edit service</string>
+    <string name="bookmark_details_description">Enter a title and the site address.</string>
+    <string name="bookmark_details_error_title">A title is required (40 characters max).</string>
+    <string name="bookmark_details_error_url">The address is not valid. Try something like service.example.tv</string>
+    <string name="bookmark_details_duplicate_warning">A service with this address already exists — saving keeps both entries.</string>
+    <string name="bookmark_action_title_hint">Title</string>
+    <string name="bookmark_action_url_hint">Address</string>
+    <string name="bookmark_action_continue">Continue</string>
+    <string name="bookmark_playback_title">Playback options</string>
+    <string name="bookmark_playback_description">Pick how this service should load. You can change these later.</string>
+    <string name="bookmark_action_use_defaults">Use defaults</string>
+    <string name="bookmark_action_save">Save service</string>
+    <string name="ua_mode_desktop">Desktop</string>
+    <string name="ua_mode_mobile">Mobile</string>
+    <string name="ua_mode_native_tv_debug">Native TV (Debug)</string>
+    <string name="text_zoom_standard">Standard (100%)</string>
+    <string name="text_zoom_large">Large (125%)</string>
+    <string name="text_zoom_extra_large">Extra Large (150%)</string>
+    <string name="banner_default">Default banner</string>
+    <string name="banner_aurora">Aurora banner</string>
+    <string name="banner_sunset">Sunset banner</string>
+    <string name="banner_forest">Forest banner</string>
+    <string name="toast_service_saved">%1$s saved</string>
+
+    <string name="ua_picker_title">Change User Agent</string>
+    <string name="ua_picker_description">Desktop usually gives TV browsers full players. Mobile is a fallback for broken layouts.</string>
+    <string name="toast_ua_changed">User agent updated</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_category_general">General</string>
+    <string name="settings_default_ua">Default User Agent</string>
+    <string name="settings_default_ua_summary">Applies to new services only</string>
+    <string name="settings_text_zoom">Text zoom for current page</string>
+    <string name="settings_cleanup">Pop-up cleanup</string>
+    <string name="settings_cleanup_summary">Hide stubborn pop-up overlays on some sites</string>
+    <string name="settings_category_privacy">Privacy</string>
+    <string name="settings_clear_session">Clear session data</string>
+    <string name="settings_clear_session_summary">Signs you out of every service</string>
+    <string name="settings_clear_session_confirm_title">Clear session data?</string>
+    <string name="settings_clear_session_confirm_message">This clears all cookies and stored site data, signing you out of every service. Your service list is kept.</string>
+    <string name="settings_confirm">Confirm</string>
+    <string name="settings_cancel">Cancel</string>
+    <string name="settings_reload_confirm_title">Reload page to apply?</string>
+    <string name="settings_reload_confirm_message">Reload page to apply? Playback will stop.</string>
+    <string name="settings_reload">Reload</string>
+    <string name="settings_result_reload">reload</string>
+    <string name="settings_toast_cleared">Session data cleared</string>
+    <string name="settings_category_about">About</string>
+    <string name="settings_engine">Browser engine</string>
+    <string name="settings_engine_unknown">Unavailable</string>
+    <string name="settings_about">About</string>
+
+    <string-array name="settings_default_ua_labels">
+        <item>@string/ua_mode_desktop</item>
+        <item>@string/ua_mode_mobile</item>
+    </string-array>
+    <string-array name="settings_default_ua_values">
+        <item>DESKTOP</item>
+        <item>MOBILE</item>
+    </string-array>
+    <string-array name="settings_text_zoom_labels">
+        <item>@string/text_zoom_standard</item>
+        <item>@string/text_zoom_large</item>
+        <item>@string/text_zoom_extra_large</item>
+    </string-array>
+    <string-array name="settings_text_zoom_values">
+        <item>100</item>
+        <item>125</item>
+        <item>150</item>
+    </string-array>
+    <string name="session_ua_pref_title">User Agent for current page</string>
+    <string name="settings_result_key_reload">reload_requested</string>
 </resources>

@@ -47,13 +47,14 @@ class ServiceActionsStep : GuidedStepSupportFragment() {
 
     override fun onGuidedActionClicked(action: GuidedAction) {
         when (action.id) {
-            ACTION_EDIT, ACTION_CHANGE_UA -> {
-                Toast.makeText(
-                    requireContext(),
-                    R.string.toast_not_available_yet,
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
+            ACTION_EDIT -> parentFragmentManager.beginTransaction()
+                .add((requireActivity() as BookmarkDetailsStep.Host).stepContainerId(), BookmarkDetailsStep.newInstance(bookmark))
+                .addToBackStack(null)
+                .commit()
+            ACTION_CHANGE_UA -> parentFragmentManager.beginTransaction()
+                .add((requireActivity() as BookmarkDetailsStep.Host).stepContainerId(), UaPickerStep.newInstance(bookmark))
+                .addToBackStack(null)
+                .commit()
             ACTION_DELETE -> {
                 val repository =
                     BookmarkRepository(AppDatabase.getInstance(requireContext()).bookmarkDao())

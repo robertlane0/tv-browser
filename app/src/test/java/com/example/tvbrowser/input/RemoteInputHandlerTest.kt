@@ -131,6 +131,24 @@ class RemoteInputHandlerTest {
     }
 
     @Test
+    fun menuIsSwallowedWhileFullscreenCustomViewAttached() {
+        val fullscreen = RecordingFullscreen(active = true)
+        val handlerInFullscreen = RemoteInputHandler(
+            webView, overlay, MediaKeyInjector(webView), onExit = { exitCount++ },
+            fullscreen = fullscreen
+        )
+
+        assertTrue(
+            handlerInFullscreen.onKeyDown(
+                KeyEvent.KEYCODE_MENU,
+                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MENU)
+            )
+        )
+
+        assertFalse("menu must never open the overlay over fullscreen", overlay.isVisible)
+    }
+
+    @Test
     fun menuCloseRequestsWebViewFocusButMenuOpenDoesNot() {
         keyDown(KeyEvent.KEYCODE_MENU)
         assertEquals(0, webView.requestFocusCalls)

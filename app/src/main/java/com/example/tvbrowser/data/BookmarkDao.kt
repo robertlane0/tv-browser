@@ -19,6 +19,9 @@ interface BookmarkDao {
     @Query("SELECT * FROM bookmarks WHERE origin = :origin LIMIT 1")
     suspend fun findByOrigin(origin: String): Bookmark?
 
+    @Query("SELECT * FROM bookmarks WHERE id = :id LIMIT 1")
+    suspend fun findById(id: Long): Bookmark?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(bookmark: Bookmark): Long
 

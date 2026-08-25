@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/browser_overlay"
+    android:layout_width="match_parent"
+    android:layout_height="96dp"
+    android:background="@color/overlay_scrim"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="48dp"
+    android:paddingEnd="48dp">
+
+    <ImageButton
+        android:id="@+id/overlay_back"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:contentDescription="@string/overlay_back"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_overlay_back" />
+
+    <ImageButton
+        android:id="@+id/overlay_forward"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginStart="8dp"
+        android:contentDescription="@string/overlay_forward"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_overlay_forward" />
+
+    <ImageButton
+        android:id="@+id/overlay_refresh"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginStart="8dp"
+        android:contentDescription="@string/overlay_refresh"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_overlay_refresh" />
+
+    <ImageButton
+        android:id="@+id/overlay_home"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginStart="8dp"
+        android:contentDescription="@string/overlay_home"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_overlay_home" />
+
+    <TextView
+        android:id="@+id/overlay_address"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginStart="16dp"
+        android:layout_weight="1"
+        android:ellipsize="start"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:hint="@string/overlay_address_hint"
+        android:singleLine="true"
+        android:textColor="@color/overlay_text"
+        android:textSize="20sp" />
+
+    <ImageView
+        android:id="@+id/overlay_security"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="12dp"
+        android:importantForAccessibility="no"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_security_secure" />
+
+    <ImageButton
+        android:id="@+id/overlay_bookmark_toggle"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginStart="8dp"
+        android:contentDescription="@string/overlay_bookmark_add"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_bookmark_add" />
+
+    <ImageButton
+        android:id="@+id/overlay_settings"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginStart="8dp"
+        android:contentDescription="@string/overlay_settings"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_overlay_settings" />
+</LinearLayout>

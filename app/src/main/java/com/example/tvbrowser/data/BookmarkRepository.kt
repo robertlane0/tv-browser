@@ -15,6 +15,9 @@ class BookmarkRepository(
     suspend fun findByOrigin(origin: String): Bookmark? =
         withContext(io) { dao.findByOrigin(origin) }
 
+    suspend fun findById(id: Long): Bookmark? =
+        withContext(io) { dao.findById(id) }
+
     suspend fun upsert(bookmark: Bookmark): Long =
         withContext(io) { dao.upsert(bookmark) }
 

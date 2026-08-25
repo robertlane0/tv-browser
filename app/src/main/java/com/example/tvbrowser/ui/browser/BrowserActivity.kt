@@ -8,9 +8,13 @@ import android.view.WindowManager
 import androidx.fragment.app.FragmentActivity
 import com.example.tvbrowser.R
 import com.example.tvbrowser.data.Bookmark
+import com.example.tvbrowser.ui.settings.SettingsActivity
 import android.annotation.SuppressLint
 
 class BrowserActivity : FragmentActivity() {
+
+    private fun webViewFragment(): WebViewFragment? =
+        supportFragmentManager.findFragmentById(R.id.browser_container) as? WebViewFragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,22 +33,32 @@ class BrowserActivity : FragmentActivity() {
         }
 
         supportFragmentManager.executePendingTransactions()
-        (supportFragmentManager.findFragmentById(R.id.browser_container) as? WebViewFragment)
-            ?.forceExitFullscreen()
+        webViewFragment()?.forceExitFullscreen()
     }
 
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        val fragment = supportFragmentManager.findFragmentById(R.id.browser_container) as? WebViewFragment
+        val fragment = webViewFragment()
+        fragment?.notifyUserInteraction()
         if (fragment?.dispatchKeyEvent(event) == true) return true
         return super.dispatchKeyEvent(event)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         val keyEvent = event ?: return super.onKeyDown(keyCode, event)
-        val handled = (supportFragmentManager.findFragmentById(R.id.browser_container) as? WebViewFragment)
-            ?.dispatchKeyDown(keyCode, keyEvent) ?: false
+        val handled = webViewFragment()?.dispatchKeyDown(keyCode, keyEvent) ?: false
         return if (handled) true else super.onKeyDown(keyCode, keyEvent)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == SettingsActivity.REQUEST_SETTINGS &&
+            resultCode == RESULT_OK &&
+            data?.getBooleanExtra(SettingsActivity.RESULT_RELOAD_REQUESTED, false) == true
+        ) {
+            webViewFragment()?.reloadWithSessionBookmark()
+        }
     }
 
     override fun onDestroy() {
