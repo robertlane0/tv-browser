@@ -5,4 +5,5 @@
     <color name="overlay_scrim">#CC000000</color>
     <color name="overlay_text">#FFFFFFFF</color>
     <color name="security_cleartext">#FFC107</color>
+    <color name="offline_banner_background">#CCE65100</color>
 </resources>

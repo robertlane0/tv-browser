@@ -273,4 +273,17 @@ class BrowserActivityTest {
         restored.destroy()
     }
 
+    @Test
+    fun t07PausePersistsSessionPointWithoutClearingCookies() {
+        val controller = launch()
+        val cookieManager = android.webkit.CookieManager.getInstance()
+        cookieManager.setCookie("https://service.example.tv", "sid=secret")
+
+        // Durability point (spec 08 §4.1): onPause() performs the cookie
+        // flush contract and never clears cookies (logout-free design).
+        controller.pause()
+
+        assertEquals("sid=secret", cookieManager.getCookie("https://service.example.tv"))
+    }
+
 }

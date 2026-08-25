@@ -19,6 +19,20 @@
         android:max="100"
         android:visibility="gone" />
 
+    <TextView
+        android:id="@+id/offline_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="@color/offline_banner_background"
+        android:gravity="center"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:text="@string/offline_banner_text"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
     <FrameLayout
         android:id="@+id/fullscreen_container"
         android:layout_width="match_parent"
@@ -68,4 +82,78 @@
                 android:textSize="20sp" />
         </LinearLayout>
     </com.example.tvbrowser.error.DrmCardView>
+
+    <com.example.tvbrowser.error.ErrorCardView
+        android:id="@+id/error_card"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/drm_error_card_background"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="720dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/error_icon"
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:layout_gravity="center_horizontal"
+                android:contentDescription="@string/error_title_network"
+                android:src="@android:drawable/ic_dialog_alert" />
+
+            <TextView
+                android:id="@+id/error_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="24dp"
+                android:textColor="@android:color/white"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/error_body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:textColor="@color/drm_error_body_text"
+                android:textSize="20sp" />
+
+            <LinearLayout
+                android:id="@+id/error_buttons"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="32dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_error_retry"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/error_action_retry" />
+
+                <Button
+                    android:id="@+id/btn_error_switch_ua"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/error_action_switch_ua" />
+
+                <Button
+                    android:id="@+id/btn_error_home"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/error_action_home" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.example.tvbrowser.error.ErrorCardView>
 </FrameLayout>

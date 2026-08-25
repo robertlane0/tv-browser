@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
+import android.webkit.CookieManager
 import androidx.fragment.app.FragmentActivity
 import com.example.tvbrowser.R
 import com.example.tvbrowser.data.Bookmark
@@ -59,6 +60,16 @@ class BrowserActivity : FragmentActivity() {
         ) {
             webViewFragment()?.reloadWithSessionBookmark()
         }
+    }
+
+    /**
+     * Durability point for login sessions (spec 08 §4.1): the flush persists
+     * in-memory cookies; it is async, so last-seconds loss on a hard kill is
+     * documented and accepted. Cookies are never cleared here.
+     */
+    override fun onPause() {
+        CookieManager.getInstance().flush()
+        super.onPause()
     }
 
     override fun onDestroy() {

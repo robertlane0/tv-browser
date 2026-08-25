@@ -3,15 +3,18 @@ package com.example.tvbrowser.ui.browser
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
-import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.widget.FrameLayout
 import android.widget.ProgressBar
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -22,7 +25,17 @@ import com.example.tvbrowser.data.AppDatabase
 import com.example.tvbrowser.data.Bookmark
 import com.example.tvbrowser.data.BookmarkRepository
 import com.example.tvbrowser.data.UaMode
+import com.example.tvbrowser.error.AutoRetryController
+import com.example.tvbrowser.error.Category
 import com.example.tvbrowser.error.DrmCardController
+import com.example.tvbrowser.error.ErrorCardController
+import com.example.tvbrowser.error.ErrorCardView
+import com.example.tvbrowser.error.ErrorClassifier
+import com.example.tvbrowser.error.NetworkMonitor
+import com.example.tvbrowser.error.RedirectLoopDetector
+import com.example.tvbrowser.error.RendererRecoveryPolicy
+import com.example.tvbrowser.error.RetryPolicy
+import com.example.tvbrowser.error.TvError
 import com.example.tvbrowser.input.AudioFocusController
 import com.example.tvbrowser.input.CssInjector
 import com.example.tvbrowser.input.MediaKeyInjector
@@ -35,7 +48,11 @@ import com.example.tvbrowser.web.UserAgentProvider
 import com.example.tvbrowser.web.WebViewConfigurator
 import kotlinx.coroutines.launch
 
-class WebViewFragment : Fragment(), AddressInputStep.Host, DpadKeyGridStep.Host {
+class WebViewFragment :
+    Fragment(),
+    AddressInputStep.Host,
+    DpadKeyGridStep.Host,
+    NetworkMonitor.Listener {
 
     private var webView: WebView? = null
     private var inputHandler: RemoteInputHandler? = null
@@ -43,10 +60,34 @@ class WebViewFragment : Fragment(), AddressInputStep.Host, DpadKeyGridStep.Host 
     private var audioFocus: AudioFocusController? = null
     private var drmCard: DrmCardController? = null
     private var overlay: BrowserOverlay? = null
+    private var errorCard: ErrorCardController? = null
+    private var autoRetry: AutoRetryController? = null
+    private var jsBridge: JsBridge? = null
+    private var mediaKeys: MediaKeyInjector? = null
+    private var networkMonitor: NetworkMonitor? = null
+    private lateinit var launchBookmark: Bookmark
     private lateinit var repository: BookmarkRepository
     private lateinit var userAgentProvider: UserAgentProvider
+    private lateinit var classifier: ErrorClassifier
+    private lateinit var loopDetector: RedirectLoopDetector
+
+    internal var rendererRecovery: RendererRecoveryPolicy = RendererRecoveryPolicy()
 
     private val bookmarkOrigins = mutableSetOf<String>()
+    private var currentUrl: String? = null
+    private var lastFailedUrl: String? = null
+
+    private val pageListener = object : TvWebViewClient.Listener {
+        override fun onMainFrameNavigation(url: String) {
+            // Track only; error surfaces stay until explicitly dismissed,
+            // retried, or replaced so loop-blocked cards survive redirects.
+            currentUrl = url
+        }
+
+        override fun onWebError(error: TvError) = showErrorCard(error)
+
+        override fun onRendererGone(didCrash: Boolean) = handleRendererGone()
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -62,55 +103,56 @@ class WebViewFragment : Fragment(), AddressInputStep.Host, DpadKeyGridStep.Host 
             activity?.finish()
             return
         }
+        launchBookmark = bookmark
 
         repository = BookmarkRepository(AppDatabase.getInstance(requireContext()).bookmarkDao())
-
-        val webView = view.findViewById<WebView>(R.id.web_view)
-        this.webView = webView
-
-        if (isDebuggable()) {
-            WebView.setWebContentsDebuggingEnabled(true)
-        }
 
         val userAgentProvider = UserAgentProvider {
             WebSettings.getDefaultUserAgent(requireContext())
         }
         this.userAgentProvider = userAgentProvider
-        WebViewConfigurator(userAgentProvider).configure(webView, bookmark)
+        classifier = ErrorClassifier()
+        loopDetector = RedirectLoopDetector()
+
+        val activity = requireActivity()
 
         val drmCard = DrmCardController(
-            requireActivity().findViewById(R.id.drm_error_card)
-        ) { webView.requestFocus() }
+            activity.findViewById(R.id.drm_error_card)
+        ) { webView?.requestFocus() }
         this.drmCard = drmCard
 
-        webView.addJavascriptInterface(
-            JsBridge { drmCard.show() },
-            JsBridge.JS_INTERFACE_NAME
+        jsBridge = JsBridge { drmCard.show() }
+
+        val cardView = activity.findViewById<ErrorCardView>(R.id.error_card)
+        errorCard = ErrorCardController(
+            card = cardView,
+            iconView = activity.findViewById(R.id.error_icon),
+            titleView = activity.findViewById(R.id.error_title),
+            bodyView = activity.findViewById(R.id.error_body),
+            retryButton = activity.findViewById(R.id.btn_error_retry),
+            switchUaButton = activity.findViewById(R.id.btn_error_switch_ua),
+            homeButton = activity.findViewById(R.id.btn_error_home),
+            onRetry = ::retryManually,
+            onSwitchUserAgent = { launchSettings(launchBookmark) },
+            onHome = { activity.finish() },
+            refocusPage = ::returnFocusToPage
         )
-        val emeHook = EmeErrorHook()
-        emeHook.attach(webView)
+        cardView.onAnyKeyWhileVisible = {
+            autoRetry?.cancelPending()
+        }
 
-        val mediaKeys = MediaKeyInjector(webView)
-        val audioFocus = AudioFocusController(requireContext(), mediaKeys)
-        this.audioFocus = audioFocus
-
-        val chromeClient = TvWebChromeClient(
-            requireActivity(),
-            requireActivity().findViewById(R.id.fullscreen_container),
-            webView,
-            requireActivity().findViewById<ProgressBar>(R.id.web_progress),
-            titleCallback = { activity?.title = it },
-            audioFocus = audioFocus
+        autoRetry = AutoRetryController(
+            classifier,
+            RetryPolicy(),
+            Handler(Looper.getMainLooper()),
+            onRetry = ::performAutomaticRetry
         )
-        this.chromeClient = chromeClient
-        webView.webChromeClient = chromeClient
 
-        webView.webViewClient = TvWebViewClient(
-            CssInjector { name ->
-                requireContext().assets.open(name).bufferedReader().use { it.readText() }
-            },
-            chromeClient,
-            emeHook::injectIfNeeded
+        networkMonitor = NetworkMonitor(requireContext().applicationContext)
+
+        installWebView(
+            savedInstanceState?.getString(KEY_RESTORE_URL)?.takeUnless { it.isBlank() }
+                ?: bookmark.url
         )
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -122,41 +164,17 @@ class WebViewFragment : Fragment(), AddressInputStep.Host, DpadKeyGridStep.Host 
                 }
             }
         }
-
-        val overlayBar = view.findViewById<View>(R.id.browser_overlay)
-        val overlay = BrowserOverlay(
-            bar = overlayBar,
-            webView = webView,
-            fullscreen = chromeClient,
-            isPlaybackActive = { mediaKeys.isPlayingAssumed },
-            isCurrentPageBookmarked = {
-                webView.url?.let { bookmarkOrigins.contains(Bookmark.originOf(it)) } == true
-            },
-            onHomeRequested = { activity?.finish() },
-            onAddressClicked = { openAddressEntry() },
-            onBookmarkToggled = { toggleBookmarkForCurrentPage() },
-            onSettingsRequested = { launchSettings(bookmark) }
-        )
-        this.overlay = overlay
-
-        inputHandler = RemoteInputHandler(
-            webView,
-            overlay,
-            mediaKeys,
-            onExit = { activity?.finish() },
-            fullscreen = chromeClient
-        )
-
-        webView.loadUrl(bookmark.url)
     }
 
     fun dispatchKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (hasModalStep()) return false
+        autoRetry?.cancelPending()
+        if (hasModalStep() || webView == null) return false
         return inputHandler?.onKeyDown(keyCode, event) ?: false
     }
 
     fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (hasModalStep()) return false
+        autoRetry?.cancelPending()
+        if (hasModalStep() || webView == null) return false
         val handler = inputHandler ?: return false
         if (!handler.isMediaKey(event.keyCode)) return false
         if (event.action == KeyEvent.ACTION_DOWN) {
@@ -175,6 +193,8 @@ class WebViewFragment : Fragment(), AddressInputStep.Host, DpadKeyGridStep.Host 
 
     fun reloadWithSessionBookmark() {
         val session = sessionBookmark() ?: return
+        clearErrorSurface(resetRetries = true)
+        loopDetector.reset()
         viewLifecycleOwner.lifecycleScope.launch {
             val fresh = repository.findById(session.id) ?: return@launch
             val target = webView ?: return@launch
@@ -193,10 +213,186 @@ class WebViewFragment : Fragment(), AddressInputStep.Host, DpadKeyGridStep.Host 
     internal val activeOverlay: BrowserOverlay?
         get() = overlay
 
+    internal val activeErrorCard: ErrorCardController?
+        get() = errorCard
+
+    /**
+     * Creates and wires a fully configured WebView (spec 03 matrix) inside the
+     * fragment container. Re-run after renderer death to recover with a fresh
+     * engine (spec 09 §5).
+     */
+    private fun installWebView(initialUrl: String) {
+        val activity = requireActivity()
+        val root = requireView()
+        overlay?.destroy()
+
+        val container = root.findViewById<FrameLayout>(R.id.web_view_container)
+        container.removeAllViews()
+
+        val webView = WebView(activity).apply {
+            id = R.id.web_view
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+        container.addView(webView)
+        this.webView = webView
+
+        if (isDebuggable()) {
+            WebView.setWebContentsDebuggingEnabled(true)
+        }
+
+        WebViewConfigurator(userAgentProvider).configure(webView, launchBookmark)
+
+        val bridge = jsBridge ?: JsBridge { drmCard?.show() }.also { jsBridge = it }
+        webView.addJavascriptInterface(bridge, JsBridge.JS_INTERFACE_NAME)
+        val emeHook = EmeErrorHook()
+        emeHook.attach(webView)
+
+        val mediaKeys = MediaKeyInjector(webView)
+        this.mediaKeys = mediaKeys
+        audioFocus?.abandon()
+        val audioFocus = AudioFocusController(requireContext(), mediaKeys)
+        this.audioFocus = audioFocus
+
+        val chromeClient = TvWebChromeClient(
+            activity,
+            activity.findViewById(R.id.fullscreen_container),
+            webView,
+            activity.findViewById<ProgressBar>(R.id.web_progress),
+            titleCallback = { activity.title = it },
+            audioFocus = audioFocus
+        )
+        this.chromeClient = chromeClient
+        webView.webChromeClient = chromeClient
+
+        webView.webViewClient = TvWebViewClient(
+            CssInjector { name ->
+                requireContext().assets.open(name).bufferedReader().use { it.readText() }
+            },
+            chromeClient,
+            emeHook::injectIfNeeded,
+            loopDetector,
+            classifier,
+            pageListener
+        )
+
+        val overlayBar = root.findViewById<View>(R.id.browser_overlay)
+        val overlay = BrowserOverlay(
+            bar = overlayBar,
+            webView = webView,
+            fullscreen = chromeClient,
+            isPlaybackActive = { mediaKeys.isPlayingAssumed },
+            isCurrentPageBookmarked = {
+                webView.url?.let { bookmarkOrigins.contains(Bookmark.originOf(it)) } == true
+            },
+            onHomeRequested = { activity?.finish() },
+            onAddressClicked = { openAddressEntry() },
+            onBookmarkToggled = { toggleBookmarkForCurrentPage() },
+            onSettingsRequested = { launchSettings(launchBookmark) }
+        )
+        this.overlay = overlay
+
+        inputHandler = RemoteInputHandler(
+            webView,
+            overlay,
+            mediaKeys,
+            onExit = { activity?.finish() },
+            fullscreen = chromeClient
+        )
+
+        currentUrl = initialUrl
+        webView.loadUrl(initialUrl)
+    }
+
+    private fun showErrorCard(error: TvError, homeOnly: Boolean = false) {
+        val card = errorCard ?: return
+        autoRetry?.cancelPending()
+        lastFailedUrl = currentUrl ?: webView?.url ?: launchBookmark.url
+        webView?.visibility = View.INVISIBLE
+        overlay?.hide()
+        card.show(error.category, error.httpCode, homeOnly)
+        autoRetry?.scheduleAfterFailure(error)
+    }
+
+    private fun clearErrorSurface(resetRetries: Boolean) {
+        if (resetRetries) autoRetry?.reset() else autoRetry?.cancelPending()
+        errorCard?.dismiss()
+        webView?.visibility = View.VISIBLE
+    }
+
+    private fun returnFocusToPage() {
+        val target = webView ?: return
+        target.visibility = View.VISIBLE
+        // Defer until the pending focus-clear from the dismissed card has been
+        // processed, otherwise the request is overwritten.
+        target.post { if (webView === target) target.requestFocus() }
+    }
+
+    private fun retryManually() {
+        val target = lastFailedUrl ?: return
+        loopDetector.reset()
+        autoRetry?.reset()
+        errorCard?.dismiss()
+        returnFocusToPage()
+        loadInWebView(target)
+    }
+
+    private fun performAutomaticRetry() {
+        val target = lastFailedUrl ?: return
+        errorCard?.dismiss()
+        returnFocusToPage()
+        loadInWebView(target)
+    }
+
+    private fun loadInWebView(url: String) {
+        autoRetry?.cancelPending()
+        currentUrl = url
+        webView?.loadUrl(url)
+    }
+
+    private fun handleRendererGone() {
+        autoRetry?.cancelPending()
+        if (!rendererRecovery.shouldAutoRecover()) {
+            webView = null
+            showErrorCard(TvError(Category.RENDERER), homeOnly = true)
+            return
+        }
+        installWebView(lastKnownUrl())
+    }
+
+    private fun lastKnownUrl(): String =
+        currentUrl ?: lastFailedUrl ?: launchBookmark.url
+
+    override fun onNetworkLost() {
+        activity?.findViewById<View>(R.id.offline_banner)?.isVisible = true
+        autoRetry?.cancelPending()
+    }
+
+    override fun onNetworkAvailable() {
+        activity?.findViewById<View>(R.id.offline_banner)?.isVisible = false
+        errorCard?.visibleCategory()
+            ?.takeIf { it == Category.NETWORK }
+            ?.let { autoRetry?.retryNowIfEligible(it) }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        networkMonitor?.register(this)
+    }
+
+    override fun onStop() {
+        networkMonitor?.unregister()
+        super.onStop()
+    }
+
     override fun onAddressCommitted(normalizedUrl: String) {
         overlay?.setPinned(false)
         overlay?.hide()
-        webView?.loadUrl(normalizedUrl)
+        clearErrorSurface(resetRetries = true)
+        loopDetector.reset()
+        loadInWebView(normalizedUrl)
     }
 
     override fun onAddressEntryCancelled() {
@@ -211,18 +407,30 @@ class WebViewFragment : Fragment(), AddressInputStep.Host, DpadKeyGridStep.Host 
     }
 
     override fun onPause() {
+        autoRetry?.cancelPending()
         webView?.onPause()
-        CookieManager.getInstance().flush()
         super.onPause()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(KEY_RESTORE_URL, currentUrl ?: webView?.url)
+    }
+
     override fun onDestroyView() {
+        autoRetry?.cancelPending()
+        networkMonitor?.unregister()
         overlay?.destroy()
         overlay = null
         audioFocus?.abandon()
         drmCard = null
+        errorCard = null
+        autoRetry = null
         chromeClient = null
         inputHandler = null
+        jsBridge = null
+        mediaKeys = null
+        networkMonitor = null
         webView?.let { dying ->
             (dying.parent as? ViewGroup)?.removeView(dying)
             dying.destroy()
@@ -292,6 +500,7 @@ class WebViewFragment : Fragment(), AddressInputStep.Host, DpadKeyGridStep.Host 
 
     companion object {
         const val MODAL_STEP_TAG = "overlay_modal_step"
+        const val KEY_RESTORE_URL = "com.example.tvbrowser.extra.RESTORE_URL"
 
         fun newInstance(bookmark: Bookmark): WebViewFragment =
             WebViewFragment().apply {

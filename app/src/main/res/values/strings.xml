@@ -23,6 +23,26 @@
     <string name="drm_error_title">Protected video not supported</string>
     <string name="drm_error_body">This service requires a level of copy protection that TV web browsers don\'t support. Playback may fail or be limited to low quality.</string>
 
+    <string name="error_title_network">Can\'t reach this service</string>
+    <string name="error_body_network">Check your internet connection, then try again.</string>
+    <string name="error_title_http_client">Page not available</string>
+    <string name="error_body_http_client">The service returned an error (HTTP %1$d). Try again later.</string>
+    <string name="error_title_http_server">Service is having trouble</string>
+    <string name="error_body_http_server">The service returned an error (HTTP %1$d). This is usually temporary.</string>
+    <string name="error_title_ssl">Secure connection failed</string>
+    <string name="error_body_ssl">This service\'s security certificate could not be verified. The page was not loaded.</string>
+    <string name="error_title_blocked">Video unavailable</string>
+    <string name="error_body_blocked">This service may block TV browsers. Try switching User Agent in Settings.</string>
+    <string name="error_title_renderer">The page crashed</string>
+    <string name="error_body_renderer">The browser engine restarted. Your login is kept; the page will reload.</string>
+    <string name="error_title_safebrowsing">Deceptive site warning</string>
+    <string name="error_body_safebrowsing">This site may try to steal your information. Going back is recommended.</string>
+    <string name="error_action_retry">Retry</string>
+    <string name="error_action_switch_ua">Switch User Agent</string>
+    <string name="error_action_home">Home</string>
+
+    <string name="offline_banner_text">No connection</string>
+
     <string name="overlay_back">Back</string>
     <string name="overlay_forward">Forward</string>
     <string name="overlay_refresh">Refresh</string>
