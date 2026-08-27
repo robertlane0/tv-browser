@@ -114,6 +114,9 @@
     <string name="settings_engine">Browser engine</string>
     <string name="settings_engine_unknown">Unavailable</string>
     <string name="settings_about">About</string>
+    <string name="settings_privacy_disclosure">Login sessions for streaming services are kept on your device. Third-party cookies are allowed because some services need them to sign you in.</string>
+    <string name="settings_privacy_summary">No analytics or crash reporting is collected. Diagnostics are limited to local logs (version, error category, domain — never full URLs or credentials).</string>
+    <string name="settings_data_safety_summary">Data stays on your device in your WebView profile, bookmarks store, and settings. No data is shared with the developer.</string>
 
     <string-array name="settings_default_ua_labels">
         <item>@string/ua_mode_desktop</item>

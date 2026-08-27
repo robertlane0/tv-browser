@@ -1,9 +1,9 @@
 ---
 title: "Project Setup and Dependencies"
-version: "1.0.0"
-status: "Draft"
+version: "1.1.0"
+status: "Reviewed"
 module: "platform"
-last_updated: "2026-08-22"
+last_updated: "2026-08-27"
 ---
 
 # Project Setup and Dependencies
@@ -155,8 +155,16 @@ review date. HTTP pages MUST surface a padlock-off indicator in the overlay
 
 | Variant | Purpose | Differences |
 |---------|---------|-------------|
-| `debug` | Development | `WebView.setWebContentsDebuggingEnabled(true)`, cleartext allowed to `localhost`, no minify |
-| `release` | Play distribution | R8 full mode, resource shrinking, debugging disabled, signing via Play App Signing |
+| `debug` | Development | `WebView.setWebContentsDebuggingEnabled(true)` gated by `FLAG_DEBUGGABLE`, cleartext allowed to `localhost`/`127.0.0.1`/`10.0.2.2` via `src/debug` overlay, no minify |
+| `release` | Play distribution | R8 full mode (`isMinifyEnabled=true`, `isShrinkResources=true`, `proguard-android-optimize.txt`), debugging disabled (`FLAG_DEBUGGABLE==false` → `setWebContentsDebuggingEnabled` never called), Safe Browsing on, signing via Play App Signing |
+
+Release audit (verified 2026-08-27):
+
+- `WebViewProviderGate` build: `assembleRelease` succeeds; `aapt2 dump xmltree` confirms release `network_security_config.xml` has only `base-config false` (no `domain-config`), debug adds loopback exceptions.
+- `JsBridge` bridge intact in release: `proguard-rules.pro` keeps `@JavascriptInterface` methods; `seeds.txt` after `minifyReleaseWithR8` lists `onDrmError` and `onMediaKey`, mapping shows class obfuscated but members kept.
+- `setWebContentsDebuggingEnabled` guarded by `isDebuggable()` (`ApplicationInfo.FLAG_DEBUGGABLE`) in `WebViewFragment`; release APK has `FLAG_DEBUGGABLE==false` so path is dead.
+- Safe Browsing: `WebViewConfigurator` calls `WebSettingsCompat.setSafeBrowsingEnabled(true)` when `WebViewFeature.SAFE_BROWSING_ENABLE` is supported (both variants; required on in release).
+- R8 full mode: `app/build.gradle.kts` `release { isMinifyEnabled=true; isShrinkResources=true; proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro") }`.
 
 R8/ProGuard rules MUST keep:
 

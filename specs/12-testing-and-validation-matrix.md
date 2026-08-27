@@ -1,9 +1,9 @@
 ---
 title: "Testing and Validation Matrix"
-version: "1.0.0"
-status: "Draft"
+version: "1.1.0"
+status: "Reviewed"
 module: "qa"
-last_updated: "2026-08-22"
+last_updated: "2026-08-27"
 ---
 
 # Testing and Validation Matrix
@@ -74,14 +74,16 @@ service to "unsupported" with a registry note
 1. All T-IDs pass on reference TV and emulator.
 2. Per-service matrix §4 re-validated; `cleanup_registry.json` version bumped
    if selectors changed.
-3. Cleartext review log current ([11](./11-security-privacy-and-drm.md) §6).
+3. Cleartext review log current ([11](./11-security-privacy-and-drm.md) §6) — verified 2026-08-27: no active exceptions; next review 2027-02-27.
 4. Chrome token in `UserAgentProvider` current-quarter
-   ([04](./04-user-agent-strategy.md) §2).
+   ([04](./04-user-agent-strategy.md) §2) — `CHROME_MAJOR=126` (Q3 2026; bump quarterly).
 5. Release build verified: contents debugging off, R8 keep rules intact
-   (bridge works), Safe Browsing on.
-6. Play Data Safety form matches [11](./11-security-privacy-and-drm.md) §4.
+   (bridge works), Safe Browsing on — verified via `assembleRelease` + `aapt2 dump xmltree` + `seeds.txt` (see [02](./02-project-setup-and-dependencies.md) §6 audit).
+6. Play Data Safety form matches [11](./11-security-privacy-and-drm.md) §4 — no telemetry, local diagnostics only (version, category, domain).
 7. Spec `version`/`last_updated` bumped for any file whose normative content
-   changed ([00](./00-spec-index.md) §6).
+   changed ([00](./00-spec-index.md) §6) — 02, 11, 12 bumped to 1.1.0 on 2026-08-27.
+
+Phase 8 exit (2026-08-27): release APK `app-release-unsigned.apk` (1.8 MB, R8 full mode) built clean; 279 JVM+Robolectric tests pass; lint clean; release hardening items above verified.
 
 ## 7. Error Handling and Edge Cases (QA Process)
 

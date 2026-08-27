@@ -1,9 +1,9 @@
 ---
 title: "Security, Privacy, and DRM Position"
-version: "1.0.0"
-status: "Draft"
+version: "1.1.0"
+status: "Reviewed"
 module: "security"
-last_updated: "2026-08-22"
+last_updated: "2026-08-27"
 ---
 
 # Security, Privacy, and DRM Position
@@ -84,10 +84,24 @@ Every entry in `network_security_config.xml` MUST have a row here:
 
 | Domain | Justification | Added | Review By | Removal Condition |
 |--------|---------------|-------|-----------|-------------------|
+| _No active cleartext exceptions — verified 2026-08-27_ | — | — | 2026-08-27 | — |
+
+Template for future per-domain exceptions (illustrative — not shipped in this
+release):
+
+| Domain | Justification | Added | Review By | Removal Condition |
+|--------|---------------|-------|-----------|-------------------|
 | `example-regional-tv.example` | Login endpoint HTTP-only as of 2026-06 | 2026-06-10 | 2026-12-10 | Site deploys HTTPS |
 
+Release verification (2026-08-27): `app/src/main/res/xml/network_security_config.xml`
+contains only `<base-config cleartextTrafficPermitted="false" />`; no
+`<domain-config>` entries are shipped. Debug variant
+`app/src/debug/res/xml/network_security_config.xml` adds loopback exceptions
+(`127.0.0.1`, `localhost`, `10.0.2.2`) for emulator QA only and is never included
+in release APKs (verified via `aapt2 dump xmltree` of `res/8G.xml`).
+
 Review cadence: every entry re-validated within 6 months; expired entries are
-removed in the next release.
+removed in the next release. Next scheduled review: 2027-02-27.
 
 ## 7. Error Handling and Edge Cases
 

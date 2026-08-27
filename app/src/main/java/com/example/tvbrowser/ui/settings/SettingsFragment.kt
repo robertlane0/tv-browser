@@ -142,7 +142,7 @@ class SettingsFragment : LeanbackPreferenceFragmentCompat() {
             requireContext().packageManager
                 .getPackageInfo(requireContext().packageName, 0).versionName
         }.getOrNull()
-        pref.summary = "${getString(R.string.app_name)}  v${version ?: "?"}"
+        pref.summary = "${getString(R.string.app_name)}  v${version ?: "?"}  ·  ${getString(R.string.settings_privacy_disclosure)}"
     }
 
     internal fun handleRadioPicked(requestKey: String, value: String): Boolean {
