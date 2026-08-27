@@ -15,7 +15,9 @@ import androidx.annotation.RequiresApi
 import com.example.tvbrowser.error.Category
 import com.example.tvbrowser.error.ErrorClassifier
 import com.example.tvbrowser.error.RedirectLoopDetector
+import com.example.tvbrowser.data.Bookmark
 import com.example.tvbrowser.error.TvError
+import com.example.tvbrowser.filter.CleanupInjector
 import com.example.tvbrowser.input.CssInjector
 import java.util.Locale
 
@@ -32,7 +34,8 @@ class TvWebViewClient(
     private val onPageStartedInjection: ((WebView) -> Unit)? = null,
     private val loopDetector: RedirectLoopDetector? = null,
     private val classifier: ErrorClassifier = ErrorClassifier(),
-    private val listener: Listener? = null
+    private val listener: Listener? = null,
+    private val cleanupInjector: CleanupInjector? = null
 ) : WebViewClient() {
 
     interface Listener {
@@ -57,14 +60,24 @@ class TvWebViewClient(
     override fun onPageFinished(view: WebView, url: String?) {
         super.onPageFinished(view, url)
         cssInjector.injectFocusHighlight(view)
+        injectCleanupIfNeeded(view, url)
     }
 
     override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
         super.doUpdateVisitedHistory(view, url, isReload)
         cssInjector.injectFocusHighlight(view)
+        injectCleanupIfNeeded(view, url)
         if (url.isNullOrEmpty() || isReload) return
         listener?.onMainFrameNavigation(url)
         trackLoginRedirectLoop(view, url)
+    }
+
+    private fun injectCleanupIfNeeded(view: WebView, url: String?) {
+        val injector = cleanupInjector ?: return
+        val origin = url?.takeUnless { it.isBlank() }?.let { runCatching { Bookmark.originOf(it) }.getOrNull() }
+            ?: view.url?.let { runCatching { Bookmark.originOf(it) }.getOrNull() }
+            ?: return
+        injector.inject(view, origin)
     }
 
     @RequiresApi(Build.VERSION_CODES.M)

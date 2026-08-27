@@ -97,7 +97,7 @@
     <string name="settings_default_ua_summary">Applies to new services only</string>
     <string name="settings_text_zoom">Text zoom for current page</string>
     <string name="settings_cleanup">Pop-up cleanup</string>
-    <string name="settings_cleanup_summary">Hide stubborn pop-up overlays on some sites</string>
+    <string name="settings_cleanup_summary">Hides newsletter sign-up and cookie pop-ups that can\'t be closed with the remote. Does not block ads in videos. Applies to newly loaded pages.</string>
     <string name="settings_category_privacy">Privacy</string>
     <string name="settings_clear_session">Clear session data</string>
     <string name="settings_clear_session_summary">Signs you out of every service</string>

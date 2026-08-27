@@ -24,7 +24,10 @@ import com.example.tvbrowser.bridge.JsBridge
 import com.example.tvbrowser.data.AppDatabase
 import com.example.tvbrowser.data.Bookmark
 import com.example.tvbrowser.data.BookmarkRepository
+import com.example.tvbrowser.data.PreferencesRepository
 import com.example.tvbrowser.data.UaMode
+import com.example.tvbrowser.filter.CleanupInjector
+import com.example.tvbrowser.filter.CleanupRegistry
 import com.example.tvbrowser.error.AutoRetryController
 import com.example.tvbrowser.error.Category
 import com.example.tvbrowser.error.DrmCardController
@@ -46,7 +49,9 @@ import com.example.tvbrowser.web.TvWebViewClient
 import com.example.tvbrowser.web.TvWebChromeClient
 import com.example.tvbrowser.web.UserAgentProvider
 import com.example.tvbrowser.web.WebViewConfigurator
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class WebViewFragment :
     Fragment(),
@@ -67,9 +72,14 @@ class WebViewFragment :
     private var networkMonitor: NetworkMonitor? = null
     private lateinit var launchBookmark: Bookmark
     private lateinit var repository: BookmarkRepository
+    private lateinit var preferencesRepository: PreferencesRepository
     private lateinit var userAgentProvider: UserAgentProvider
     private lateinit var classifier: ErrorClassifier
     private lateinit var loopDetector: RedirectLoopDetector
+    private var cleanupRegistry: CleanupRegistry? = null
+    private var cleanupInjector: CleanupInjector? = null
+    @Volatile
+    private var isCleanupEnabled: Boolean = false
 
     internal var rendererRecovery: RendererRecoveryPolicy = RendererRecoveryPolicy()
 
@@ -106,6 +116,7 @@ class WebViewFragment :
         launchBookmark = bookmark
 
         repository = BookmarkRepository(AppDatabase.getInstance(requireContext()).bookmarkDao())
+        preferencesRepository = PreferencesRepository.getInstance(requireContext())
 
         val userAgentProvider = UserAgentProvider {
             WebSettings.getDefaultUserAgent(requireContext())
@@ -113,6 +124,13 @@ class WebViewFragment :
         this.userAgentProvider = userAgentProvider
         classifier = ErrorClassifier()
         loopDetector = RedirectLoopDetector()
+
+        cleanupRegistry = runCatching {
+            CleanupRegistry.loadFromAssets(requireContext(), "cleanup_registry.json")
+        }.getOrElse { CleanupRegistry.parse("""{"version":0,"generic":{}}""") }
+        cleanupInjector = cleanupRegistry?.let { reg ->
+            CleanupInjector(reg) { isCleanupEnabled }
+        }
 
         val activity = requireActivity()
 
@@ -150,10 +168,25 @@ class WebViewFragment :
 
         networkMonitor = NetworkMonitor(requireContext().applicationContext)
 
+        // Synchronous initial read so the first page load respects the stored opt-in
+        // (subsequent updates arrive via the collector below). Best-effort: if
+        // DataStore is unavailable, default to disabled and rely on the flow.
+        isCleanupEnabled = runCatching {
+            runBlocking { preferencesRepository.contentFilterEnabled().first() }
+        }.getOrDefault(false)
+
         installWebView(
             savedInstanceState?.getString(KEY_RESTORE_URL)?.takeUnless { it.isBlank() }
                 ?: bookmark.url
         )
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                preferencesRepository.contentFilterEnabled().collect { enabled ->
+                    isCleanupEnabled = enabled
+                }
+            }
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -275,7 +308,8 @@ class WebViewFragment :
             emeHook::injectIfNeeded,
             loopDetector,
             classifier,
-            pageListener
+            pageListener,
+            cleanupInjector
         )
 
         val overlayBar = root.findViewById<View>(R.id.browser_overlay)
@@ -431,6 +465,8 @@ class WebViewFragment :
         jsBridge = null
         mediaKeys = null
         networkMonitor = null
+        cleanupInjector = null
+        cleanupRegistry = null
         webView?.let { dying ->
             (dying.parent as? ViewGroup)?.removeView(dying)
             dying.destroy()

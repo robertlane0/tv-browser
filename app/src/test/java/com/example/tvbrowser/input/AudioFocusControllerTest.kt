@@ -33,7 +33,9 @@ class AudioFocusControllerTest {
         val js = shadowOf(webView).lastEvaluatedJavascript!!
         assertTrue(js.contains("v.pause()"))
         assertTrue("loss must never trigger playback", !js.contains("v.play()"))
-        assertTrue(js.contains("if(!v||v.paused)return"))
+        // Largest-video upgrade: picks visible largest video, pause-only injection (spec 10 §5, 06 AD-1)
+        assertTrue(js.contains("querySelectorAll('video')"))
+        assertTrue(js.contains("clientWidth"))
     }
 
     @Test

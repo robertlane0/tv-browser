@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "generic": {
+    "hideSelectors": [
+      "[class*='newsletter-modal']",
+      "[class*='signup-overlay']",
+      "[id*='cookie-consent']",
+      "[class*='modal-backdrop']"
+    ],
+    "closeButtonSelectors": [
+      "[class*='modal'] [aria-label='Close']",
+      "[class*='overlay'] [class*='close']"
+    ]
+  },
+  "sites": [
+    {
+      "origin": "https://example-regional-tv.example",
+      "hideSelectors": [
+        "#unclosable-promo"
+      ],
+      "notes": "Unclosable promo overlay without focusable close; hidden after load"
+    }
+  ]
+}

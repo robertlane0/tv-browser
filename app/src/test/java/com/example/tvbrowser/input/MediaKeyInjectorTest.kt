@@ -32,7 +32,10 @@ class MediaKeyInjectorTest {
 
         val js = shadowOf(webView).lastEvaluatedJavascript!!
         assertTrue(js.contains("v.paused?v.play():v.pause()"))
-        assertTrue(js.contains("document.querySelector('video')"))
+        // Upgraded to largest visible video selector (spec 10 §5)
+        assertTrue(js.contains("querySelectorAll('video')"))
+        assertTrue(js.contains("clientWidth"))
+        assertTrue(js.contains("clientHeight"))
     }
 
     @Test
@@ -63,9 +66,11 @@ class MediaKeyInjectorTest {
         injector.pauseIfPlaying()
 
         val js = shadowOf(webView).lastEvaluatedJavascript!!
-        assertTrue(js.contains("if(!v||v.paused)return"))
+        // Largest-video upgrade keeps pause-only semantics (spec 06 AD-1, 10 §5)
+        assertTrue(js.contains("querySelectorAll('video')"))
         assertTrue(js.contains("v.pause()"))
         assertTrue(!js.contains("v.play()"))
+        assertTrue(js.contains("clientWidth"))
     }
 
     @Test
